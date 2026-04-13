@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Lights</title>
+<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  min-height: 100dvh;
+  font-family: -apple-system, 'SF Pro Display', sans-serif;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a12;
+}
+
+/* ── Animated gradient background ── */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #0a0a12;
+  overflow: hidden;
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  animation: drift 12s ease-in-out infinite alternate;
+}
+
+.blob1 {
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, #1a0a3a, #0d0520);
+  top: -100px; left: -80px;
+  animation-delay: 0s;
+}
+.blob2 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #0a1a3a, #051020);
+  bottom: -80px; right: -60px;
+  animation-delay: -4s;
+}
+.blob3 {
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, #1a1a0a, #100d00);
+  top: 40%; left: 30%;
+  animation-delay: -8s;
+}
+
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(30px, 20px) scale(1.08); }
+}
+
+/* ── Layout ── */
+.page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top, 54px) 20px env(safe-area-inset-bottom, 34px);
+}
+
+/* ── Header ── */
+.header {
+  padding: 16px 4px 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.header-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #fff;
+  line-height: 1;
+}
+
+.header-time {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.2px;
+}
+
+/* ── Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  flex: 1;
+}
+
+/* All lights tile spans full width */
+.tile-all { grid-column: 1 / -1; }
+
+/* ── Liquid glass tile ── */
+.tile {
+  border-radius: 22px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  /* Glass base */
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.08) inset,
+    0 -1px 0 rgba(0,0,0,0.2) inset,
+    0 8px 32px rgba(0,0,0,0.4),
+    0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* Glass shine streak */
+.tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  border-radius: 22px 22px 60% 60% / 22px 22px 30px 30px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.12) 0%,
+    rgba(255,255,255,0.03) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Edge shimmer */
+.tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.1) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255,255,255,0.04) 100%
+  );
+  pointer-events: none;
+}
+
+.tile:active {
+  transform: scale(0.96);
+}
+
+/* ── ON state glow ── */
+.tile.is-on {
+  background: rgba(255, 200, 50, 0.12);
+  border-color: rgba(255, 210, 80, 0.3);
+  box-shadow:
+    0 2px 0 rgba(255,220,100,0.15) inset,
+    0 -1px 0 rgba(0,0,0,0.15) inset,
+    0 8px 40px rgba(255, 180, 20, 0.2),
+    0 0 60px rgba(255, 160, 0, 0.08),
+    0 1px 0 rgba(255,255,255,0.08);
+}
+
+.tile.is-on::before {
+  background: linear-gradient(
+    180deg,
+    rgba(255,220,100,0.18) 0%,
+    rgba(255,180,50,0.06) 60%,
+    transparent 100%
+  );
+}
+
+/* ── Tile content ── */
+.tile-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 4px;
+  transition: filter 0.3s;
+}
+
+.tile.is-on .tile-icon {
+  filter: drop-shadow(0 0 8px rgba(255,200,50,0.6));
+}
+
+.tile-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+.tile-status {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.4);
+  margin-top: 2px;
+  transition: color 0.3s;
+}
+
+.tile.is-on .tile-status {
+  color: rgba(255, 210, 80, 0.85);
+}
+
+/* Toggle switch in corner */
+.tile-toggle {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+  flex-shrink: 0;
+}
+
+.tile-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.25s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.tile.is-on .tile-toggle {
+  background: #fbbf24;
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(251,191,36,0.5);
+}
+
+.tile.is-on .tile-toggle-thumb {
+  transform: translateX(20px);
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+}
+
+/* All lights tile — bigger layout */
+.tile-all .tile-icon { font-size: 32px; }
+.tile-all .tile-name { font-size: 17px; }
+
+/* ── Tap ripple ── */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  transform: scale(0);
+  animation: ripple-anim 0.5s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes ripple-anim {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ── Bottom time bar ── */
+.bottom-bar {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+}
+
+.home-indicator {
+  width: 134px;
+  height: 5px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 3px;
+}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-blob blob1"></div>
+  <div class="bg-blob blob2"></div>
+  <div class="bg-blob blob3"></div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="header-title">Lights</div>
+    <div class="header-time" id="clock"></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- All Lights -->
+    <div class="tile tile-all" id="dev-all" onclick="doToggle('all', event)">
+      <div>
+        <div class="tile-icon">💡</div>
+        <div class="tile-name">All Lights</div>
+        <div class="tile-status" id="status-all">Off</div>
+      </div>
+      <div class="tile-toggle" id="tog-all">
+        <div class="tile-toggle-thumb"></div>
+      </div>
+    </div>
+
+    <!-- Desk Lamp -->
+    <div class="tile" id="dev-lamp" onclick="doToggle('lamp', event)">
+      <div>
+        <div class="tile-icon">🖥️</div>
+        <div class="tile-name">Desk Lamp</div>
+        <div class="tile-status" id="status-lamp">Off</div>
+      </div>
+      <div class="tile-toggle" id="tog-lamp">
+        <div class="tile-toggle-thumb"></div>
+      </div>
+    </div>
+
+    <!-- Bed Lamp -->
+    <div class="tile" id="dev-bed" onclick="doToggle('bed', event)">
+      <div>
+        <div class="tile-icon">🛏️</div>
+        <div class="tile-name">Bed Lamp</div>
+        <div class="tile-status" id="status-bed">Off</div>
+      </div>
+      <div class="tile-toggle" id="tog-bed">
+        <div class="tile-toggle-thumb"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-bar">
+    <div class="home-indicator"></div>
+  </div>
+</div>
+
+<script>
+  const URLS = {
+    allOn:   'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=86e46106-f198-40d4-b61b-c4d50692e17b&token=751c87fb-cad0-412e-85d4-a3929ec2f63a&response=json',
+    allOff:  'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=6bd6f2fb-1844-4ad9-ad50-0286294ad781&token=416da6d7-cd5e-470d-8713-fa4da0236ea0&response=json',
+    lampOn:  'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=f199a193-8fb6-4f8d-a51c-5198857902c6&token=1e2345dd-d1e2-4097-875e-4570c966af16&response=json',
+    lampOff: 'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=ca023627-779f-4fbc-a74f-3e9730ec3de9&token=ee6256a1-1b9e-469b-aed7-2e3499056a38&response=json',
+    bedOn:   'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=659b7c13-72d4-4489-b710-a468f214e330&token=80cb79eb-d211-4290-9d92-2837a490ffaf&response=json',
+    bedOff:  'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=c76b57b8-5522-4454-9135-a270a0dbe32d&token=3b826b4a-b412-4caa-a8ec-e986aed5780c&response=json',
+  };
+
+  const state = { all: false, lamp: false, bed: false };
+
+  function vibrate() {
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  function ripple(tile, e) {
+    const r = document.createElement('div');
+    r.className = 'ripple';
+    const rect = tile.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
+    tile.appendChild(r);
+    setTimeout(() => r.remove(), 500);
+  }
+
+  function setDevice(group, newOn) {
+    state[group] = newOn;
+    const tile = document.getElementById(`dev-${group}`);
+    tile.classList.toggle('is-on', newOn);
+    document.getElementById(`status-${group}`).textContent = newOn ? 'On' : 'Off';
+    fetch(URLS[group + (newOn ? 'On' : 'Off')], { mode: 'no-cors' }).catch(() => {});
+  }
+
+  function doToggle(group, e) {
+    vibrate();
+    ripple(document.getElementById(`dev-${group}`), e);
+    const newOn = !state[group];
+    setDevice(group, newOn);
+    if (group === 'all') {
+      setDevice('lamp', newOn);
+      setDevice('bed', newOn);
+    }
+  }
+
+  // Live clock
+  function tick() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 10000);
+</script>
+</body>
+</html>
