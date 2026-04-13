@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="light"] {
+    --bg: #f5f5f5;
+    --label: #aaa;
+    --device-label: #bbb;
+    --device-label-on: #555;
+    --base-bg: #c9c9c9;
+    --base-shadow: #b0b0b0;
+    --pill-bg: #e8e8e8;
+    --pill-color: #ccc;
+    --pill-on-bg: #fde8e8;
+    --pill-on-color: #c0392b;
+    --mode-btn-bg: #e0e0e0;
+    --mode-btn-color: #888;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #141414;
+    --label: #555;
+    --device-label: #444;
+    --device-label-on: #aaa;
+    --base-bg: #2a2a2a;
+    --base-shadow: #0e0e0e;
+    --pill-bg: #222;
+    --pill-color: #444;
+    --pill-on-bg: #2d1010;
+    --pill-on-color: #e05555;
+    --mode-btn-bg: #222;
+    --mode-btn-color: #555;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    padding: 2rem;
+    transition: background 0.3s;
+  }
+
+  h1 {
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--label);
+    margin-bottom: -1.5rem;
+    transition: color 0.3s;
+  }
+
+  .row {
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .device {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+  }
+
+  .device-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--device-label);
+    transition: color 0.3s;
+  }
+
+  .device.is-on .device-label {
+    color: var(--device-label-on);
+  }
+
+  .btn-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+  }
+
+  .btn-base {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--base-bg);
+    box-shadow:
+      0 6px 0 var(--base-shadow),
+      0 8px 16px rgba(0,0,0,0.35);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .btn {
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    background: radial-gradient(circle at 38% 32%, #e05555 0%, #b91c1c 45%, #7f1010 100%);
+    box-shadow:
+      0 5px 0 #6b0e0e,
+      0 7px 20px rgba(180, 20, 20, 0.35),
+      inset 0 1px 2px rgba(255,255,255,0.25),
+      inset 0 -2px 4px rgba(0,0,0,0.3);
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 18%;
+    left: 22%;
+    width: 28%;
+    height: 18%;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+
+  .btn-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.55);
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+    transition: color 0.2s;
+  }
+
+  .btn:active, .btn.pressed {
+    transform: translateY(4px);
+    box-shadow:
+      0 1px 0 #6b0e0e,
+      0 2px 8px rgba(180, 20, 20, 0.3),
+      inset 0 1px 2px rgba(255,255,255,0.2),
+      inset 0 -1px 3px rgba(0,0,0,0.25);
+  }
+
+  .device.is-on .btn {
+    background: radial-gradient(circle at 38% 32%, #ff7070 0%, #ef2020 40%, #a01010 100%);
+    box-shadow:
+      0 5px 0 #7a0f0f,
+      0 7px 28px rgba(239, 32, 32, 0.6),
+      0 0 40px rgba(239, 32, 32, 0.25),
+      inset 0 1px 2px rgba(255,255,255,0.3),
+      inset 0 -2px 4px rgba(0,0,0,0.25);
+  }
+
+  .device.is-on .btn-text {
+    color: rgba(255,255,255,0.9);
+  }
+
+  .status-pill {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--pill-bg);
+    color: var(--pill-color);
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .device.is-on .status-pill {
+    background: var(--pill-on-bg);
+    color: var(--pill-on-color);
+  }
+
+  /* Mode toggle */
+  .mode-btn {
+    position: fixed;
+    top: 1.2rem;
+    right: 1.2rem;
+    background: var(--mode-btn-bg);
+    border: none;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mode-btn-color);
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mode-btn:hover { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<button class="mode-btn" onclick="toggleMode()" id="mode-btn">☀ Light</button>
+
+<h1>Smart Home</h1>
+
+<div class="row">
+
+  <div class="device" id="dev-all">
+    <div class="device-label">All Lights</div>
+    <div class="btn-wrap">
+      <div class="btn-base"></div>
+      <button class="btn" id="btn-all" onclick="doToggle('all')" aria-label="Toggle all lights">
+        <span class="btn-text" id="text-all">OFF</span>
+      </button>
+    </div>
+    <div class="status-pill" id="pill-all">Off</div>
+  </div>
+
+  <div class="device" id="dev-lamp">
+    <div class="device-label">Desk Lamp</div>
+    <div class="btn-wrap">
+      <div class="btn-base"></div>
+      <button class="btn" id="btn-lamp" onclick="doToggle('lamp')" aria-label="Toggle desk lamp">
+        <span class="btn-text" id="text-lamp">OFF</span>
+      </button>
+    </div>
+    <div class="status-pill" id="pill-lamp">Off</div>
+  </div>
+
+  <div class="device" id="dev-bed">
+    <div class="device-label">Bed Lamp</div>
+    <div class="btn-wrap">
+      <div class="btn-base"></div>
+      <button class="btn" id="btn-bed" onclick="doToggle('bed')" aria-label="Toggle bed lamp">
+        <span class="btn-text" id="text-bed">OFF</span>
+      </button>
+    </div>
+    <div class="status-pill" id="pill-bed">Off</div>
+  </div>
+
+</div>
+
+<script>
+  const URLS = {
+    allOn:   'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=86e46106-f198-40d4-b61b-c4d50692e17b&token=751c87fb-cad0-412e-85d4-a3929ec2f63a&response=json',
+    allOff:  'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=6bd6f2fb-1844-4ad9-ad50-0286294ad781&token=416da6d7-cd5e-470d-8713-fa4da0236ea0&response=json',
+    lampOn:  'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=f199a193-8fb6-4f8d-a51c-5198857902c6&token=1e2345dd-d1e2-4097-875e-4570c966af16&response=json',
+    lampOff: 'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=ca023627-779f-4fbc-a74f-3e9730ec3de9&token=ee6256a1-1b9e-469b-aed7-2e3499056a38&response=json',
+    bedOn:   'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=659b7c13-72d4-4489-b710-a468f214e330&token=80cb79eb-d211-4290-9d92-2837a490ffaf&response=json',
+    bedOff:  'https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=c76b57b8-5522-4454-9135-a270a0dbe32d&token=3b826b4a-b412-4caa-a8ec-e986aed5780c&response=json',
+  };
+
+  const state = { all: false, lamp: false, bed: false };
+
+  function setDevice(group, newOn) {
+    state[group] = newOn;
+    const action = group + (newOn ? 'On' : 'Off');
+    document.getElementById(`dev-${group}`).classList.toggle('is-on', newOn);
+    document.getElementById(`text-${group}`).textContent = newOn ? 'ON' : 'OFF';
+    document.getElementById(`pill-${group}`).textContent = newOn ? 'On' : 'Off';
+    fetch(URLS[action], { mode: 'no-cors' }).catch(() => {});
+  }
+
+  function doToggle(group) {
+    const newOn = !state[group];
+
+    const btn = document.getElementById(`btn-${group}`);
+    btn.classList.add('pressed');
+    setTimeout(() => btn.classList.remove('pressed'), 120);
+
+    setDevice(group, newOn);
+
+    // All Lights also controls desk and bed
+    if (group === 'all') {
+      setDevice('lamp', newOn);
+      setDevice('bed', newOn);
+    }
+  }
+
+  function toggleMode() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('mode-btn').textContent = isDark ? '☾ Dark' : '☀ Light';
+  }
+</script>
+</body>
+</html>
