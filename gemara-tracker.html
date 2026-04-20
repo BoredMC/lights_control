@@ -395,16 +395,20 @@ function renderOverview() {
     const total = amudim.length;
     const done = learned.size;
     const pct = total ? Math.round(done / total * 100) : 0;
-    const dafDone = Math.floor(done / 2);
-    const dafTotal = Math.floor(total / 2);
+    const totalDapim = m.end - m.start + 1;
+    let dafDone = 0;
+    for (let d = m.start; d <= m.end; d++) {
+      if (learned.has(`${d}a`) && learned.has(`${d}b`)) dafDone++;
+    }
 
     const card = document.createElement('div');
     card.className = 'overview-card';
     card.innerHTML = `
       <h2>${m.name} <small style="font-size:0.7rem;color:var(--text-dim);font-weight:400">${m.transliteration}</small></h2>
+      <div class="ov-stat-row"><span>Dapim learned</span><span>${dafDone} / ${totalDapim}</span></div>
+      <div class="ov-stat-row"><span>Dapim remaining</span><span>${totalDapim - dafDone}</span></div>
       <div class="ov-stat-row"><span>Amudim learned</span><span>${done} / ${total}</span></div>
-      <div class="ov-stat-row"><span>Dapim (approx)</span><span>${dafDone} / ${dafTotal}</span></div>
-      <div class="ov-stat-row"><span>Remaining amudim</span><span>${total - done}</span></div>
+      <div class="ov-stat-row"><span>Amudim remaining</span><span>${total - done}</span></div>
       <div class="ov-stat-row"><span>Complete</span><span>${pct}%</span></div>
       <div class="ov-bar"><div class="ov-fill" style="width:${pct}%"></div></div>
     `;
@@ -424,12 +428,26 @@ function renderMasechet(m) {
   container.className = 'masechet-view' + (activeTab === m.id ? ' active' : '');
   container.id = `view-${m.id}`;
 
+  function countDapim(learnedSet) {
+    let complete = 0;
+    for (let daf = m.start; daf <= m.end; daf++) {
+      if (learnedSet.has(`${daf}a`) && learnedSet.has(`${daf}b`)) complete++;
+    }
+    return complete;
+  }
+
+  const totalDapim = m.end - m.start + 1;
+
   function rebuildStats() {
     const done = learned.size;
     const pct = total ? Math.round(done / total * 100) : 0;
     const remaining = total - done;
-    container.querySelector('.stat-value.done').textContent = done;
-    container.querySelector('.stat-value.remaining').textContent = remaining;
+    const dapimDone = countDapim(learned);
+    const dapimRemaining = totalDapim - dapimDone;
+    container.querySelector('.stat-value.amudim-done').textContent = done;
+    container.querySelector('.stat-value.amudim-remaining').textContent = remaining;
+    container.querySelector('.stat-value.dapim-done').textContent = dapimDone;
+    container.querySelector('.stat-value.dapim-remaining').textContent = dapimRemaining;
     container.querySelector('.stat-value.pct').textContent = pct + '%';
     container.querySelector('.progress-fill').style.width = pct + '%';
   }
@@ -438,16 +456,20 @@ function renderMasechet(m) {
   statsBar.className = 'stats-bar';
   statsBar.innerHTML = `
     <div class="stat">
-      <span class="stat-label">Learned</span>
-      <span class="stat-value green done">${learned.size}</span>
+      <span class="stat-label">Dapim learned</span>
+      <span class="stat-value green dapim-done">${countDapim(learned)}</span>
     </div>
     <div class="stat">
-      <span class="stat-label">Remaining</span>
-      <span class="stat-value dim remaining">${total - learned.size}</span>
+      <span class="stat-label">Dapim remaining</span>
+      <span class="stat-value dim dapim-remaining">${totalDapim - countDapim(learned)}</span>
     </div>
     <div class="stat">
-      <span class="stat-label">Total amudim</span>
-      <span class="stat-value dim">${total}</span>
+      <span class="stat-label">Amudim learned</span>
+      <span class="stat-value green amudim-done">${learned.size}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Amudim remaining</span>
+      <span class="stat-value dim amudim-remaining">${total - learned.size}</span>
     </div>
     <div class="stat">
       <span class="stat-label">Complete</span>
