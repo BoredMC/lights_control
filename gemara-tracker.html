@@ -136,6 +136,25 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 .mini-card-info .pct { color:var(--accent); }
 .mini-card.completed .mini-card-info .pct { color:var(--learned-text); }
 
+
+/* SHAS AGGREGATE BANNER */
+.shas-banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px 16px;
+  margin-bottom: 4px;
+}
+.shas-banner-stats { display:flex; flex-wrap:wrap; gap:24px; margin-bottom:14px; }
+.shas-stat { display:flex; flex-direction:column; gap:3px; }
+.shas-stat-val { font-family:'Frank Ruhl Libre',serif; font-size:1.8rem; font-weight:900; color:var(--learned-text); line-height:1; }
+.shas-stat-val.dim { color:var(--text-dim); }
+.shas-stat-val.gold { color:var(--gold-light); }
+.shas-stat-lbl { font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.shas-banner-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-bottom:8px; }
+.shas-banner-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:3px; transition:width .4s; }
+.shas-banner-sub { font-size:0.6rem; color:var(--text-dim); letter-spacing:0.06em; }
+
 /* RESPONSIVE */
 @media(max-width:600px){
   header { padding:20px 16px 18px; }
@@ -145,6 +164,8 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
   .ov-grid { grid-template-columns:1fr 1fr; }
   .seder-mini-grid { grid-template-columns:1fr 1fr; }
   .daf-grid { grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); }
+  .shas-banner-stats { gap:16px; }
+  .shas-stat-val { font-size:1.4rem; }
 }
 </style>
 </head>
@@ -218,6 +239,10 @@ const SHAS = [
   { id:'taanis', he:'תענית', en:"Ta'anis", start:2, end:31, perakim:[
     {name:'מאימתי מזכירין',start:2},{name:'בשלשה במרחשון',start:10},
     {name:'סדר תעניות',start:15},{name:'בשלשה פרקים',start:26}
+  ]},
+  { id:'megillah', he:'מגילה', en:'Megillah', start:2, end:32, perakim:[
+    {name:'מגילה נקראת',start:2},{name:'הקורא את המגילה',start:17},
+    {name:'בני העיר',start:26},{name:'הקורא עומד',start:21}
   ]},
   { id:'moed_katan', he:'מועד קטן', en:"Mo'ed Katan", start:2, end:29, perakim:[
     {name:'משקין',start:2},{name:'מי שמת',start:14},{name:'ואלו מגלחין',start:18}
@@ -430,6 +455,51 @@ function renderOverview() {
   const wrap = document.createElement('div');
   wrap.className = 'view' + (activeTab==='overview'?' active':'');
   wrap.id = 'view-overview';
+
+  // ── Aggregate Shas stats ──
+  let totalShasDapim = 0, learnedShasDapim = 0, totalShasAmudim = 0, learnedShasAmudim = 0;
+  let completedCount = 0;
+  SHAS.forEach(s => s.masechtot.forEach(m => {
+    const learned = getLearnedSet(m.id);
+    totalShasDapim += totalDapim(m);
+    totalShasAmudim += totalAmudim(m);
+    learnedShasDapim += countDapim(m, learned);
+    learnedShasAmudim += learned.size;
+    if (getStatus(m) === 'completed') completedCount++;
+  }));
+  const shasPct = pct(learnedShasAmudim, totalShasAmudim);
+
+  const banner = document.createElement('div');
+  banner.className = 'shas-banner';
+  banner.innerHTML = `
+    <div class="shas-banner-stats">
+      <div class="shas-stat">
+        <span class="shas-stat-val">${learnedShasDapim.toLocaleString()}</span>
+        <span class="shas-stat-lbl">Dapim learned</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val dim">${(totalShasDapim - learnedShasDapim).toLocaleString()}</span>
+        <span class="shas-stat-lbl">Dapim remaining</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val">${learnedShasAmudim.toLocaleString()}</span>
+        <span class="shas-stat-lbl">Amudim learned</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val dim">${completedCount}</span>
+        <span class="shas-stat-lbl">Masechtot finished</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val gold">${shasPct}%</span>
+        <span class="shas-stat-lbl">of Shas complete</span>
+      </div>
+    </div>
+    <div class="shas-banner-bar">
+      <div class="shas-banner-fill" style="width:${shasPct}%"></div>
+    </div>
+    <div class="shas-banner-sub">${totalShasDapim.toLocaleString()} total dapim · ${SHAS.reduce((a,s)=>a+s.masechtot.length,0)} masechtot</div>
+  `;
+  wrap.appendChild(banner);
 
   const inProgress = [], completed = [];
   SHAS.forEach(s => s.masechtot.forEach(m => {
