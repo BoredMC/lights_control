@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>גמרא Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e0c;
+  --surface: #1a1915;
+  --surface2: #161512;
+  --border: #2e2c26;
+  --accent: #c8973a;
+  --accent-dim: #8a6424;
+  --gold-light: #f0c96a;
+  --text: #e8e0ce;
+  --text-dim: #7a7060;
+  --learned: #2d5236;
+  --learned-border: #4a8a5a;
+  --learned-text: #a8e6b8;
+  --radius: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+/* HEADER */
+header {
+  padding: 30px 40px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end; gap: 16px;
+  background: linear-gradient(180deg,#151410 0%,transparent 100%);
+}
+header h1 { font-family:'Frank Ruhl Libre',serif; font-size:2.4rem; font-weight:900; color:var(--gold-light); letter-spacing:-0.02em; line-height:1; }
+header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12em; text-transform:uppercase; padding-bottom:3px; }
+
+/* TABS */
+.tabs { display:flex; padding:0 40px; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; gap:0; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { padding:12px 18px; font-family:'Frank Ruhl Libre',serif; font-size:1rem; color:var(--text-dim); cursor:pointer; border:none; border-bottom:2px solid transparent; white-space:nowrap; background:none; outline:none; transition:color .15s,border-color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--gold-light); border-bottom-color:var(--accent); }
+.tab .tc { font-family:'DM Mono',monospace; font-size:0.6rem; color:var(--text-dim); margin-left:5px; }
+.tab.active .tc { color:var(--accent-dim); }
+
+/* VIEWS */
+.view { display:none; padding:28px 40px 60px; }
+.view.active { display:block; }
+
+/* STATS BAR */
+.stats-bar { display:flex; gap:24px; align-items:center; flex-wrap:wrap; margin-bottom:24px; }
+.stat { display:flex; flex-direction:column; gap:2px; }
+.stat-label { font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.stat-value { font-size:1.4rem; font-family:'Frank Ruhl Libre',serif; font-weight:700; color:var(--gold-light); }
+.stat-value.green { color:var(--learned-text); }
+.stat-value.dim { color:var(--text-dim); }
+.progress-bar { flex:1; min-width:160px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:3px; transition:width .3s; }
+
+/* BUTTONS */
+.btn-row { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+.btn { font-family:'DM Mono',monospace; font-size:0.62rem; background:none; border:1px solid var(--border); border-radius:var(--radius); padding:6px 12px; cursor:pointer; letter-spacing:0.05em; transition:color .15s,border-color .15s; color:var(--text-dim); }
+.btn:hover { color:var(--gold-light); border-color:var(--accent-dim); }
+.btn.danger:hover { color:#c08070; border-color:#c08070; }
+
+/* PEREK SECTIONS */
+.perek-block { margin-bottom:28px; }
+.perek-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.perek-name { font-family:'Frank Ruhl Libre',serif; font-size:0.95rem; color:var(--accent); }
+.perek-dafim { font-size:0.6rem; color:var(--text-dim); letter-spacing:0.06em; }
+.perek-pct { font-size:0.6rem; color:var(--text-dim); margin-left:auto; }
+.perek-mini-bar { width:60px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.perek-mini-fill { height:100%; background:var(--accent-dim); border-radius:2px; transition:width .2s; }
+
+/* DAF GRID */
+.daf-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(66px,1fr)); gap:5px; }
+.amud-cell {
+  position:relative; padding:8px 6px 7px; border:1px solid var(--border); border-radius:var(--radius);
+  cursor:pointer; user-select:none; background:var(--surface2);
+  transition:border-color .1s,background .1s,transform .07s;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.amud-cell:hover { border-color:var(--accent-dim); transform:translateY(-1px); }
+.amud-cell.learned { background:var(--learned); border-color:var(--learned-border); }
+.amud-cell .daf-num { font-family:'Frank Ruhl Libre',serif; font-size:1rem; font-weight:700; color:var(--text); line-height:1; }
+.amud-cell.learned .daf-num { color:var(--learned-text); }
+.amud-cell .amud-lbl { font-size:0.55rem; color:var(--text-dim); letter-spacing:0.05em; }
+.amud-cell.learned .amud-lbl { color:#7acc90; }
+.amud-cell .ck { position:absolute; top:3px; right:4px; font-size:0.5rem; color:var(--learned-text); opacity:0; transition:opacity .12s; }
+.amud-cell.learned .ck { opacity:1; }
+
+/* ── OVERVIEW ── */
+.ov-section-title { font-size:0.6rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:12px; margin-top:28px; }
+.ov-section-title:first-child { margin-top:0; }
+
+.ov-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin-bottom:8px; }
+
+.ov-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:16px 18px; cursor:pointer; transition:border-color .15s,transform .1s;
+}
+.ov-card:hover { border-color:var(--accent-dim); transform:translateY(-2px); }
+.ov-card.completed { border-color:var(--learned-border); }
+.ov-card h3 { font-family:'Frank Ruhl Libre',serif; font-size:1.2rem; font-weight:700; color:var(--gold-light); margin-bottom:10px; }
+.ov-card h3 small { font-size:0.65rem; color:var(--text-dim); font-weight:400; margin-left:4px; }
+.ov-row { display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:4px; }
+.ov-row span:last-child { color:var(--text); }
+.ov-bar { height:3px; background:var(--border); border-radius:2px; margin-top:10px; overflow:hidden; }
+.ov-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:2px; transition:width .3s; }
+.ov-card.completed .ov-fill { background:linear-gradient(90deg,#3a7a4a,var(--learned-text)); }
+
+/* Seder collapsible */
+.seder-group { margin-bottom:6px; }
+.seder-toggle {
+  display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px 0;
+  font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim);
+  border:none; background:none; outline:none; width:100%;
+}
+.seder-toggle:hover { color:var(--text); }
+.seder-arrow { font-size:0.5rem; transition:transform .2s; }
+.seder-arrow.open { transform:rotate(90deg); }
+.seder-body { display:none; }
+.seder-body.open { display:block; }
+.seder-mini-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; padding-bottom:10px; }
+.mini-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:8px 10px; cursor:pointer; transition:border-color .12s;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.mini-card:hover { border-color:var(--accent-dim); }
+.mini-card.has-progress { border-color:var(--accent-dim); }
+.mini-card.completed { border-color:var(--learned-border); }
+.mini-card-name { font-family:'Frank Ruhl Libre',serif; font-size:0.95rem; color:var(--text); }
+.mini-card-info { font-size:0.58rem; color:var(--text-dim); text-align:right; }
+.mini-card-info .pct { color:var(--accent); }
+.mini-card.completed .mini-card-info .pct { color:var(--learned-text); }
+
+
+/* SHAS AGGREGATE BANNER */
+.shas-banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px 16px;
+  margin-bottom: 4px;
+}
+.shas-banner-stats { display:flex; flex-wrap:wrap; gap:24px; margin-bottom:14px; }
+.shas-stat { display:flex; flex-direction:column; gap:3px; }
+.shas-stat-val { font-family:'Frank Ruhl Libre',serif; font-size:1.8rem; font-weight:900; color:var(--learned-text); line-height:1; }
+.shas-stat-val.dim { color:var(--text-dim); }
+.shas-stat-val.gold { color:var(--gold-light); }
+.shas-stat-lbl { font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.shas-banner-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-bottom:8px; }
+.shas-banner-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:3px; transition:width .4s; }
+.shas-banner-sub { font-size:0.6rem; color:var(--text-dim); letter-spacing:0.06em; }
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  header { padding:20px 16px 18px; }
+  header h1 { font-size:2rem; }
+  .tabs { padding:0 16px; }
+  .view { padding:20px 16px 60px; }
+  .ov-grid { grid-template-columns:1fr 1fr; }
+  .seder-mini-grid { grid-template-columns:1fr 1fr; }
+  .daf-grid { grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); }
+  .shas-banner-stats { gap:16px; }
+  .shas-stat-val { font-size:1.4rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div><h1>גמרא Tracker</h1></div>
+  <div class="subtitle">Bavli · Personal Limud Log</div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+<div id="views"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA — all of Shas with correct daf ranges and perakim
+// ═══════════════════════════════════════════════════════════════
+
+const SHAS = [
+{ seder:'Zeraim', masechtot:[
+  { id:'brachos', he:'ברכות', en:'Brachos', start:2, end:64, perakim:[
+    {name:'מאימתי',start:2},{name:'היה קורא',start:13},{name:'מי שמתו',start:17},
+    {name:'תפלת השחר',start:26},{name:'אין עומדין',start:30},{name:'כיצד מברכין',start:35},
+    {name:'שלשה שאכלו',start:45},{name:'אלו דברים',start:51},{name:'הרואה',start:54}
+  ]},
+]},
+{ seder:'Moed', masechtot:[
+  { id:'shabbos', he:'שבת', en:'Shabbos', start:2, end:157, perakim:[
+    {name:'יציאות השבת',start:2},{name:'במה מדליקין',start:25},{name:'כל כתבי',start:115},
+    {name:'כירה',start:36},{name:'במה טומנין',start:47},{name:'במה אשה',start:57},
+    {name:'שמנה שרצים',start:107},{name:'המצניע',start:91},{name:'הזורק',start:96},
+    {name:'המוציא יין',start:78},{name:'רבי עקיבא',start:73},{name:'הבונה',start:102},
+    {name:'אמר רבי עקיבא',start:106},{name:'שני שבתות',start:68},
+    {name:'מי שהחשיך',start:150},{name:'כל כלי',start:122},{name:'רבי אליעזר',start:128},
+    {name:'טז - כלל גדול',start:70},{name:'שבת', start:7},
+    {name:'כלל גדול',start:70},{name:'מפנין',start:126},{name:'נוטל',start:141},
+    {name:'חבית',start:146},{name:'יו״ח שחל',start:153}
+  ]},
+  { id:'eruvin', he:'עירובין', en:'Eruvin', start:2, end:105, perakim:[
+    {name:'מבוי',start:2},{name:'עושין פסין',start:20},{name:'בכיצד משתתפין',start:49},
+    {name:'הדר',start:61},{name:'כיצד מעברין',start:53},{name:'בהמה בסולם',start:76},
+    {name:'המוצא תפילין',start:96},{name:'מי שהוציאוהו',start:40},{name:'הדר עם הנכרי',start:62},
+    {name:'כל גגות',start:89}
+  ]},
+  { id:'pesachim', he:'פסחים', en:'Pesachim', start:2, end:121, perakim:[
+    {name:'אור לארבעה עשר',start:2},{name:'כל שעה',start:21},{name:'אלו עוברין',start:42},
+    {name:'מקום שנהגו',start:50},{name:'כיצד צולין',start:74},{name:'אלו דברים',start:96},
+    {name:'אלו דברים שבין',start:70},{name:'האשה',start:88},{name:'מי שהיה',start:93},
+    {name:'ערבי פסחים',start:99}
+  ]},
+  { id:'shekalim', he:'שקלים', en:'Shekalim', start:2, end:22, perakim:[
+    {name:'בא׳ באדר',start:2},{name:'על מה מוסיפין',start:9},{name:'אף על פי',start:14},{name:'ריש לקיש',start:21}
+  ]},
+  { id:'yoma', he:'יומא', en:'Yoma', start:2, end:88, perakim:[
+    {name:'שבעת ימים',start:2},{name:'בראשונה',start:18},{name:'אמר להם הממונה',start:28},
+    {name:'טרף בקלפי',start:39},{name:'הוציאו לו',start:52},{name:'בא לו',start:60},
+    {name:'שני שעירי',start:62},{name:'יום הכיפורים',start:73}
+  ]},
+  { id:'sukkah', he:'סוכה', en:'Sukkah', start:2, end:56, perakim:[
+    {name:'סוכה',start:2},{name:'הישן',start:20},{name:'לולב הגזול',start:29},
+    {name:'לולב וערבה',start:41},{name:'החליל',start:50}
+  ]},
+  { id:'beitzah', he:'ביצה', en:'Beitzah', start:2, end:40, perakim:[
+    {name:'ביצה',start:2},{name:'המביא',start:15},{name:'אין צדין',start:24},
+    {name:'המביא כדי יין',start:30},{name:'אין צדין דגים',start:36}
+  ]},
+  { id:'rosh_hashana', he:'ראש השנה', en:'Rosh Hashana', start:2, end:35, perakim:[
+    {name:'ארבעה ראשי שנים',start:2},{name:'ראוהו בית דין',start:20},
+    {name:'ראש חדש',start:25},{name:'יום טוב של ראש',start:28}
+  ]},
+  { id:'taanis', he:'תענית', en:"Ta'anis", start:2, end:31, perakim:[
+    {name:'מאימתי מזכירין',start:2},{name:'בשלשה במרחשון',start:10},
+    {name:'סדר תעניות',start:15},{name:'בשלשה פרקים',start:26}
+  ]},
+  { id:'megillah', he:'מגילה', en:'Megillah', start:2, end:32, perakim:[
+    {name:'מגילה נקראת',start:2},{name:'הקורא את המגילה',start:17},
+    {name:'בני העיר',start:26},{name:'הקורא עומד',start:21}
+  ]},
+  { id:'moed_katan', he:'מועד קטן', en:"Mo'ed Katan", start:2, end:29, perakim:[
+    {name:'משקין',start:2},{name:'מי שמת',start:14},{name:'ואלו מגלחין',start:18}
+  ]},
+  { id:'chagigah', he:'חגיגה', en:'Chagigah', start:2, end:27, perakim:[
+    {name:'הכל חייבין',start:2},{name:'אין דורשין',start:11},{name:'חומר בקודש',start:18}
+  ]},
+]},
+{ seder:'Nashim', masechtot:[
+  { id:'yevamos', he:'יבמות', en:'Yevamos', start:2, end:122, perakim:[
+    {name:'חמש עשרה נשים',start:2},{name:'כיצד',start:17},{name:'ארבעה אחין',start:26},
+    {name:'האשה רבה',start:27},{name:'יש מותרות',start:41},{name:'האשה שהלך',start:46},
+    {name:'אלמנה לכהן גדול',start:59},{name:'הערל',start:70},{name:'הבא על יבמתו',start:80},
+    {name:'נושאין על האנוסה',start:84},{name:'חרש',start:112},{name:'בית שמאי',start:101},
+    {name:'ר׳ עקיבא',start:49},{name:'אלמנה',start:87},{name:'כיצד האשה',start:93},
+    {name:'המפלת',start:36}
+  ]},
+  { id:'kesubos', he:'כתובות', en:'Kesubos', start:2, end:112, perakim:[
+    {name:'בתולה',start:2},{name:'האשה שנתארמלה',start:16},{name:'אלו נערות',start:29},
+    {name:'נערה שנתפתתה',start:38},{name:'אף על פי',start:47},{name:'המדיר',start:70},
+    {name:'האשה שנפלו',start:78},{name:'הכותב לאשתו',start:83},{name:'אלמנה ניזונת',start:96},
+    {name:'מי שהיה נשוי',start:91},{name:'נערה המאורסה',start:46},{name:'השולח',start:63},
+    {name:'שני דייני',start:105}
+  ]},
+  { id:'nedarim', he:'נדרים', en:'Nedarim', start:2, end:91, perakim:[
+    {name:'כל כינויי',start:2},{name:'ואלו מותרין',start:15},{name:'אף על פי',start:20},
+    {name:'אין בין המודר',start:33},{name:'השותפין',start:45},{name:'הנודר מן המבושל',start:52},
+    {name:'הנודר מן הירק',start:57},{name:'קונם יין',start:62},{name:'ר׳ אליעזר',start:66},
+    {name:'נערה המאורסה',start:72},{name:'בית שמאי',start:85}
+  ]},
+  { id:'nazir', he:'נזיר', en:'Nazir', start:2, end:66, perakim:[
+    {name:'כל כינויי נזירות',start:2},{name:'הריני נזיר',start:11},{name:'מי שאמר',start:17},
+    {name:'בית שמאי',start:29},{name:'שמשון',start:4},{name:'כהן גדול',start:47},
+    {name:'שני נזירים',start:57},{name:'הנזיר שגילח',start:45}
+  ]},
+  { id:'sotah', he:'סוטה', en:'Sotah', start:2, end:49, perakim:[
+    {name:'המקנא',start:2},{name:'היה מביא',start:7},{name:'היה נוטל',start:14},
+    {name:'ארוסה ושומרת',start:23},{name:'כשם',start:27},{name:'ואלו נאמרין',start:32},
+    {name:'עגלה ערופה',start:44},{name:'משוח מלחמה',start:42},{name:'כהן משוח',start:47}
+  ]},
+  { id:'gittin', he:'גיטין', en:'Gittin', start:2, end:90, perakim:[
+    {name:'המביא גט',start:2},{name:'המביא גט ממדינת',start:17},{name:'כל הגט',start:26},
+    {name:'השולח',start:32},{name:'המגרש',start:45},{name:'הזורק',start:65},
+    {name:'מי שאחזו',start:70},{name:'המפקיר שדהו',start:73},{name:'הגוזל בתרא',start:77}
+  ]},
+  { id:'kiddushin', he:'קידושין', en:'Kiddushin', start:2, end:82, perakim:[
+    {name:'האשה נקנית',start:2},{name:'האיש מקדש',start:41},{name:'האשה נקנית ב',start:48},
+    {name:'עשרה יוחסין',start:69}
+  ]},
+]},
+{ seder:'Nezikin', masechtot:[
+  { id:'bk', he:'בבא קמא', en:'Bava Kamma', start:2, end:119, perakim:[
+    {name:'ארבעה אבות',start:2},{name:'כיצד הרגל',start:17},{name:'המניח',start:23},
+    {name:'שור שנגח',start:33},{name:'שור שנגח ד',start:44},{name:'מרובה',start:62},
+    {name:'החובל',start:83},{name:'הגוזל',start:94},{name:'הגוזל בתרא',start:113},
+    {name:'הגוזל עצים',start:98}
+  ]},
+  { id:'bm', he:'בבא מציעא', en:'Bava Metzia', start:2, end:119, perakim:[
+    {name:'שנים אוחזין',start:2},{name:'אלו מציאות',start:21},{name:'המפקיד',start:33},
+    {name:'הזהב',start:44},{name:'איזהו נשך',start:60},{name:'השוכר',start:75},
+    {name:'השוכר את האומנין',start:77},{name:'השוכר את הפועלים',start:83},
+    {name:'הבית והעלייה',start:116},{name:'המקבל',start:103}
+  ]},
+  { id:'bb', he:'בבא בתרא', en:'Bava Basra', start:2, end:176, perakim:[
+    {name:'השותפין',start:2},{name:'לא יחפור',start:17},{name:'חזקת הבתים',start:29},
+    {name:'המוכר את הבית',start:61},{name:'המוכר את הספינה',start:73},
+    {name:'לא יבנה',start:98},{name:'שום היתומים',start:107},{name:'גט פשוט',start:160},
+    {name:'מי שמת',start:108},{name:'יש נוחלין',start:108}
+  ]},
+  { id:'sanhedrin', he:'סנהדרין', en:'Sanhedrin', start:2, end:113, perakim:[
+    {name:'דיני ממונות',start:2},{name:'כהן גדול',start:18},{name:'זה בורר',start:23},
+    {name:'אחד דיני ממונות',start:32},{name:'שור שנגח',start:37},{name:'נגמר הדין',start:43},
+    {name:'ד׳ מיתות',start:49},{name:'בן סורר ומורה',start:68},{name:'הנחנקין',start:84},
+    {name:'אלו הן הנשרפין',start:75},{name:'חלק',start:90}
+  ]},
+  { id:'makkos', he:'מכות', en:'Makkot', start:2, end:24, perakim:[
+    {name:'כיצד העדים',start:2},{name:'אלו הן הגולין',start:7},{name:'אלו הן הלוקין',start:13}
+  ]},
+  { id:'shevuos', he:'שבועות', en:'Shevuos', start:2, end:49, perakim:[
+    {name:'שבועות שתים',start:2},{name:'שבועות שתים ב',start:14},{name:'שבועת שוא',start:19},
+    {name:'שבועת ביטוי',start:25},{name:'שבועת העדות',start:30},{name:'שבועת הפיקדון',start:36},
+    {name:'שבועות הדיינין',start:38},{name:'כל הנשבעין',start:45}
+  ]},
+  { id:'avoda_zara', he:'עבודה זרה', en:'Avoda Zara', start:2, end:76, perakim:[
+    {name:'לפני אידיהן',start:2},{name:'אין מעמידין',start:22},{name:'כל הצלמים',start:40},
+    {name:'ר׳ ישמעאל',start:45},{name:'השוכר את הפועל',start:55}
+  ]},
+  { id:'horayos', he:'הוריות', en:'Horayos', start:2, end:14, perakim:[
+    {name:'הורו בית דין',start:2},{name:'ומה בין',start:6},{name:'כהן משיח',start:10}
+  ]},
+]},
+{ seder:'Kodashim', masechtot:[
+  { id:'zevachim', he:'זבחים', en:'Zevachim', start:2, end:120, perakim:[
+    {name:'כל הזבחים',start:2},{name:'כל הזבחים ב',start:11},{name:'איזהו מקומן',start:47},
+    {name:'כל שאין מטמא',start:27},{name:'קדשי קדשים',start:52},{name:'פרת חטאת',start:57},
+    {name:'חטאת העוף',start:64},{name:'כל המנחות',start:77},{name:'ד׳ אחין',start:97},
+    {name:'ב׳ כבשי עצרת',start:91},{name:'דם חטאת',start:93},{name:'הפסח',start:99},
+    {name:'קדשים קלים',start:104},{name:'ר׳ שמעון',start:109}
+  ]},
+  { id:'menachos', he:'מנחות', en:'Menachos', start:2, end:110, perakim:[
+    {name:'כל המנחות',start:2},{name:'כל המנחות ב',start:12},{name:'כל קרבנות',start:27},
+    {name:'הרי עלי יין',start:89},{name:'ר׳ ישמעאל',start:51},{name:'שתי הלחם',start:95},
+    {name:'ר׳ עקיבא',start:53},{name:'כל המנחות באות',start:74},{name:'התכלת',start:38},
+    {name:'הקומץ רבה',start:20},{name:'המנחות והנסכים',start:91}
+  ]},
+  { id:'chulin', he:'חולין', en:'Chulin', start:2, end:142, perakim:[
+    {name:'הכל שוחטין',start:2},{name:'כיסוי הדם',start:83},{name:'אותו ואת בנו',start:78},
+    {name:'ד׳ וה׳',start:68},{name:'שילוח הקן',start:138},{name:'הזרוע',start:130},
+    {name:'הגיד',start:89},{name:'כל הבשר',start:103},{name:'טרפות',start:42},
+    {name:'בהמה המקשה',start:69},{name:'כל הבשר ב',start:115},{name:'עוף וגבינה',start:103}
+  ]},
+  { id:'bechoros', he:'בכורות', en:'Bechoros', start:2, end:61, perakim:[
+    {name:'כל פטרי',start:2},{name:'הלוקח עובר',start:15},{name:'על אלו מומין',start:28},
+    {name:'יש בכור',start:36},{name:'מעשר בהמה',start:55},{name:'כל פסולי',start:40}
+  ]},
+  { id:'erchin', he:'ערכין', en:'Erchin', start:2, end:34, perakim:[
+    {name:'הכל מעריכין',start:2},{name:'המקדיש שדהו',start:14},{name:'אין מחרימין',start:28},
+    {name:'פרק ד',start:17},{name:'פרק ה',start:19}
+  ]},
+  { id:'temurah', he:'תמורה', en:'Temurah', start:2, end:34, perakim:[
+    {name:'הכל ממירין',start:2},{name:'יש בקרבנות',start:10},{name:'אלו קדשים',start:16},
+    {name:'ולד חטאת',start:18},{name:'כיצד מערימין',start:25},{name:'כל האסורין',start:28}
+  ]},
+  { id:'kerisos', he:'כריתות', en:'Kerisos', start:2, end:28, perakim:[
+    {name:'שלשים ושש',start:2},{name:'ארבעה מחוסרי',start:8},{name:'ידיעות הטומאה',start:13},
+    {name:'שאין מכירין',start:19},{name:'קרבן עולה ויורד',start:22},{name:'הנהנה',start:25}
+  ]},
+  { id:'meilah', he:'מעילה', en:'Meilah', start:2, end:22, perakim:[
+    {name:'קדשי קדשים',start:2},{name:'קדשים קלים',start:8},{name:'חטאת העוף',start:11},
+    {name:'ולד חטאת',start:13},{name:'השליח שעשה',start:15},{name:'כיצד מועלין',start:18}
+  ]},
+  { id:'niddah', he:'נדה', en:'Niddah', start:2, end:73, perakim:[
+    {name:'שמאי אומר',start:2},{name:'כל היד',start:13},{name:'תינוקת',start:35},
+    {name:'בנות כותים',start:31},{name:'המפלת',start:21},{name:'האשה שהיא',start:37},
+    {name:'דם הנדה',start:49},{name:'חרש',start:56},{name:'בנות שבע',start:65},{name:'תינוקת ב',start:69}
+  ]},
+]},
+];
+
+// Flat lookup by id
+const M_BY_ID = {};
+SHAS.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; }));
+
+// ── STORAGE ────────────────────────────────────────────────────
+function getLearnedSet(mId) {
+  try { const r = localStorage.getItem('g_'+mId); return r ? new Set(JSON.parse(r)) : new Set(); }
+  catch { return new Set(); }
+}
+function saveLearnedSet(mId, set) { localStorage.setItem('g_'+mId, JSON.stringify([...set])); }
+function toggleAmud(mId, key) {
+  const s = getLearnedSet(mId);
+  s.has(key) ? s.delete(key) : s.add(key);
+  saveLearnedSet(mId, s); return s;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function getAmudim(m) {
+  const list = [];
+  for (let d = m.start; d <= m.end; d++) {
+    list.push({daf:d,amud:'a',key:`${d}a`});
+    list.push({daf:d,amud:'b',key:`${d}b`});
+  }
+  return list;
+}
+function countDapim(m, learned) {
+  let n = 0;
+  for (let d = m.start; d <= m.end; d++) if (learned.has(`${d}a`) && learned.has(`${d}b`)) n++;
+  return n;
+}
+function totalDapim(m) { return m.end - m.start + 1; }
+function totalAmudim(m) { return totalDapim(m) * 2; }
+function pct(done, total) { return total ? Math.round(done/total*100) : 0; }
+
+function getStatus(m) {
+  const learned = getLearnedSet(m.id);
+  if (learned.size === 0) return 'unstarted';
+  if (learned.size === totalAmudim(m)) return 'completed';
+  return 'inprogress';
+}
+
+// ── STATE ─────────────────────────────────────────────────────
+let activeTab = 'overview';
+
+// ── TABS ──────────────────────────────────────────────────────
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = '';
+  // Overview tab
+  const ov = document.createElement('button');
+  ov.className = 'tab' + (activeTab==='overview'?' active':'');
+  ov.textContent = 'Overview';
+  ov.onclick = () => { activeTab='overview'; renderAll(); };
+  el.appendChild(ov);
+
+  // Tabs for masechtot that are in-progress or completed
+  SHAS.forEach(s => s.masechtot.forEach(m => {
+    const st = getStatus(m);
+    if (st === 'unstarted') return;
+    const learned = getLearnedSet(m.id);
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (activeTab===m.id?' active':'');
+    btn.innerHTML = `${m.en} <span class="tc">${learned.size}/${totalAmudim(m)}</span>`;
+    btn.onclick = () => { activeTab=m.id; renderAll(); };
+    el.appendChild(btn);
+  }));
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────
+function renderOverview() {
+  const wrap = document.createElement('div');
+  wrap.className = 'view' + (activeTab==='overview'?' active':'');
+  wrap.id = 'view-overview';
+
+  // ── Aggregate Shas stats ──
+  let totalShasDapim = 0, learnedShasDapim = 0, totalShasAmudim = 0, learnedShasAmudim = 0;
+  let completedCount = 0;
+  SHAS.forEach(s => s.masechtot.forEach(m => {
+    const learned = getLearnedSet(m.id);
+    totalShasDapim += totalDapim(m);
+    totalShasAmudim += totalAmudim(m);
+    learnedShasDapim += countDapim(m, learned);
+    learnedShasAmudim += learned.size;
+    if (getStatus(m) === 'completed') completedCount++;
+  }));
+  const shasPct = pct(learnedShasAmudim, totalShasAmudim);
+
+  const banner = document.createElement('div');
+  banner.className = 'shas-banner';
+  banner.innerHTML = `
+    <div class="shas-banner-stats">
+      <div class="shas-stat">
+        <span class="shas-stat-val">${learnedShasDapim.toLocaleString()}</span>
+        <span class="shas-stat-lbl">Dapim learned</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val dim">${(totalShasDapim - learnedShasDapim).toLocaleString()}</span>
+        <span class="shas-stat-lbl">Dapim remaining</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val">${learnedShasAmudim.toLocaleString()}</span>
+        <span class="shas-stat-lbl">Amudim learned</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val dim">${completedCount}</span>
+        <span class="shas-stat-lbl">Masechtot finished</span>
+      </div>
+      <div class="shas-stat">
+        <span class="shas-stat-val gold">${shasPct}%</span>
+        <span class="shas-stat-lbl">of Shas complete</span>
+      </div>
+    </div>
+    <div class="shas-banner-bar">
+      <div class="shas-banner-fill" style="width:${shasPct}%"></div>
+    </div>
+    <div class="shas-banner-sub">${totalShasDapim.toLocaleString()} total dapim · ${SHAS.reduce((a,s)=>a+s.masechtot.length,0)} masechtot</div>
+  `;
+  wrap.appendChild(banner);
+
+  const inProgress = [], completed = [];
+  SHAS.forEach(s => s.masechtot.forEach(m => {
+    const st = getStatus(m);
+    if (st === 'inprogress') inProgress.push(m);
+    if (st === 'completed') completed.push(m);
+  }));
+
+  if (inProgress.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'ov-section-title'; lbl.textContent = 'In Progress';
+    wrap.appendChild(lbl);
+    const grid = document.createElement('div'); grid.className = 'ov-grid';
+    inProgress.forEach(m => grid.appendChild(makeOvCard(m)));
+    wrap.appendChild(grid);
+  }
+
+  if (completed.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'ov-section-title'; lbl.textContent = 'Completed';
+    wrap.appendChild(lbl);
+    const grid = document.createElement('div'); grid.className = 'ov-grid';
+    completed.forEach(m => grid.appendChild(makeOvCard(m)));
+    wrap.appendChild(grid);
+  }
+
+  const allLbl = document.createElement('div');
+  allLbl.className = 'ov-section-title'; allLbl.textContent = 'All of Shas';
+  wrap.appendChild(allLbl);
+
+  SHAS.forEach(s => {
+    const group = document.createElement('div'); group.className = 'seder-group';
+    const btn = document.createElement('button'); btn.className = 'seder-toggle';
+    const arrow = document.createElement('span'); arrow.className = 'seder-arrow';
+    arrow.textContent = '▶';
+    btn.appendChild(arrow);
+    const lbl = document.createElement('span');
+    lbl.textContent = `Seder ${s.seder} · ${s.masechtot.length} masechtot`;
+    btn.appendChild(lbl);
+    const body = document.createElement('div'); body.className = 'seder-body';
+    const miniGrid = document.createElement('div'); miniGrid.className = 'seder-mini-grid';
+
+    s.masechtot.forEach(m => {
+      const learned = getLearnedSet(m.id);
+      const amDone = learned.size;
+      const amTotal = totalAmudim(m);
+      const p = pct(amDone, amTotal);
+      const st = getStatus(m);
+      const card = document.createElement('div');
+      card.className = 'mini-card' + (st==='inprogress'?' has-progress':st==='completed'?' completed':'');
+      card.innerHTML = `<span class="mini-card-name">${m.he}</span><div class="mini-card-info"><div>${m.en}</div><div class="pct">${p > 0 ? p+'%' : totalDapim(m)+' dapim'}</div></div>`;
+      card.onclick = () => { activeTab = m.id; renderAll(); };
+      miniGrid.appendChild(card);
+    });
+
+    body.appendChild(miniGrid);
+    btn.onclick = () => {
+      const open = body.classList.toggle('open');
+      arrow.classList.toggle('open', open);
+    };
+    group.appendChild(btn); group.appendChild(body);
+    wrap.appendChild(group);
+  });
+
+  return wrap;
+}
+
+function makeOvCard(m) {
+  const learned = getLearnedSet(m.id);
+  const amDone = learned.size, amTotal = totalAmudim(m);
+  const dDone = countDapim(m, learned), dTotal = totalDapim(m);
+  const p = pct(amDone, amTotal);
+  const st = getStatus(m);
+  const card = document.createElement('div');
+  card.className = 'ov-card' + (st==='completed'?' completed':'');
+  card.innerHTML = `
+    <h3>${m.he}<small>${m.en}</small></h3>
+    <div class="ov-row"><span>Dapim learned</span><span>${dDone} / ${dTotal}</span></div>
+    <div class="ov-row"><span>Dapim remaining</span><span>${dTotal - dDone}</span></div>
+    <div class="ov-row"><span>Amudim learned</span><span>${amDone} / ${amTotal}</span></div>
+    <div class="ov-row"><span>Complete</span><span>${p}%</span></div>
+    <div class="ov-bar"><div class="ov-fill" style="width:${p}%"></div></div>
+  `;
+  card.onclick = () => { activeTab = m.id; renderAll(); };
+  return card;
+}
+
+// ── MASECHET VIEW ────────────────────────────────────────────
+function renderMasechet(m) {
+  const wrap = document.createElement('div');
+  wrap.className = 'view' + (activeTab===m.id?' active':'');
+  wrap.id = 'view-'+m.id;
+
+  let learned = getLearnedSet(m.id);
+  const amTotal = totalAmudim(m), dTotal = totalDapim(m);
+
+  // stats bar
+  const stats = document.createElement('div'); stats.className = 'stats-bar';
+  stats.innerHTML = `
+    <div class="stat"><span class="stat-label">Dapim learned</span><span class="stat-value green sv-dd">${countDapim(m,learned)}</span></div>
+    <div class="stat"><span class="stat-label">Dapim remaining</span><span class="stat-value dim sv-dr">${dTotal - countDapim(m,learned)}</span></div>
+    <div class="stat"><span class="stat-label">Amudim learned</span><span class="stat-value green sv-ad">${learned.size}</span></div>
+    <div class="stat"><span class="stat-label">Amudim remaining</span><span class="stat-value dim sv-ar">${amTotal - learned.size}</span></div>
+    <div class="stat"><span class="stat-label">Complete</span><span class="stat-value sv-pct">${pct(learned.size,amTotal)}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct(learned.size,amTotal)}%"></div></div>
+    <div class="btn-row">
+      <button class="btn btn-markall">Mark all complete</button>
+      <button class="btn danger btn-clear">Clear all</button>
+    </div>
+  `;
+  wrap.appendChild(stats);
+
+  function rebuildStats() {
+    wrap.querySelector('.sv-dd').textContent = countDapim(m,learned);
+    wrap.querySelector('.sv-dr').textContent = dTotal - countDapim(m,learned);
+    wrap.querySelector('.sv-ad').textContent = learned.size;
+    wrap.querySelector('.sv-ar').textContent = amTotal - learned.size;
+    const p = pct(learned.size, amTotal);
+    wrap.querySelector('.sv-pct').textContent = p+'%';
+    wrap.querySelector('.progress-fill').style.width = p+'%';
+  }
+
+  // Build perakim blocks
+  const perakim = m.perakim || [];
+  // sort ascending
+  const sorted = [...perakim].sort((a,b)=>a.start-b.start);
+  // build segments: each perek goes from its start to (next perek start - 1), last goes to m.end
+  const segments = sorted.map((pk, i) => {
+    const endDaf = i < sorted.length-1 ? sorted[i+1].start - 1 : m.end;
+    return { name: pk.name, startDaf: pk.start, endDaf };
+  });
+  // if no perakim, treat whole masechet as one block
+  if (segments.length === 0) segments.push({ name: m.en, startDaf: m.start, endDaf: m.end });
+
+  segments.forEach((seg, si) => {
+    const block = document.createElement('div'); block.className = 'perek-block';
+
+    const hdr = document.createElement('div'); hdr.className = 'perek-header';
+    const pName = document.createElement('span'); pName.className = 'perek-name';
+    pName.textContent = `פרק ${si+1} — ${seg.name}`;
+    const pDafim = document.createElement('span'); pDafim.className = 'perek-dafim';
+    pDafim.textContent = `${seg.startDaf}a – ${seg.endDaf}b`;
+    const pPct = document.createElement('span'); pPct.className = 'perek-pct';
+    const miniBar = document.createElement('div'); miniBar.className = 'perek-mini-bar';
+    const miniFill = document.createElement('div'); miniFill.className = 'perek-mini-fill';
+    miniBar.appendChild(miniFill);
+
+    function calcPerekPct() {
+      let done = 0, total = 0;
+      for (let d = seg.startDaf; d <= seg.endDaf; d++) {
+        if (learned.has(`${d}a`)) done++;
+        if (learned.has(`${d}b`)) done++;
+        total += 2;
+      }
+      return { done, total, p: pct(done,total) };
+    }
+    function refreshPerek() {
+      const {done,total,p} = calcPerekPct();
+      pPct.textContent = p+'%';
+      miniFill.style.width = p+'%';
+    }
+    refreshPerek();
+
+    hdr.appendChild(pName); hdr.appendChild(pDafim); hdr.appendChild(pPct); hdr.appendChild(miniBar);
+    block.appendChild(hdr);
+
+    const grid = document.createElement('div'); grid.className = 'daf-grid';
+    for (let d = seg.startDaf; d <= seg.endDaf; d++) {
+      ['a','b'].forEach(amud => {
+        const key = `${d}${amud}`;
+        const cell = document.createElement('div');
+        cell.className = 'amud-cell' + (learned.has(key)?' learned':'');
+        cell.innerHTML = `<span class="ck">✓</span><span class="daf-num">${d}</span><span class="amud-lbl">${amud}</span>`;
+        cell.onclick = () => {
+          learned = toggleAmud(m.id, key);
+          cell.classList.toggle('learned', learned.has(key));
+          rebuildStats(); refreshPerek(); renderTabs();
+        };
+        grid.appendChild(cell);
+      });
+    }
+    block.appendChild(grid);
+    wrap.appendChild(block);
+  });
+
+  // button events
+  setTimeout(() => {
+    wrap.querySelector('.btn-markall').onclick = () => {
+      const amudim = getAmudim(m);
+      amudim.forEach(({key}) => learned.add(key));
+      saveLearnedSet(m.id, learned);
+      wrap.querySelectorAll('.amud-cell').forEach(c => c.classList.add('learned'));
+      rebuildStats();
+      wrap.querySelectorAll('.perek-mini-fill').forEach(f => f.style.width='100%');
+      wrap.querySelectorAll('.perek-pct').forEach(p => p.textContent='100%');
+      renderTabs();
+    };
+    wrap.querySelector('.btn-clear').onclick = () => {
+      if (!confirm(`Clear all progress for ${m.en}?`)) return;
+      learned = new Set(); saveLearnedSet(m.id, learned);
+      wrap.querySelectorAll('.amud-cell').forEach(c => c.classList.remove('learned'));
+      rebuildStats();
+      wrap.querySelectorAll('.perek-mini-fill').forEach(f => f.style.width='0%');
+      wrap.querySelectorAll('.perek-pct').forEach(p => p.textContent='0%');
+      renderTabs();
+    };
+  }, 0);
+
+  return wrap;
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────
+function renderAll() {
+  const views = document.getElementById('views');
+  views.innerHTML = '';
+  views.appendChild(renderOverview());
+  SHAS.forEach(s => s.masechtot.forEach(m => views.appendChild(renderMasechet(m))));
+  renderTabs();
+}
+
+renderAll();
+</script>
+</body>
+</html>
