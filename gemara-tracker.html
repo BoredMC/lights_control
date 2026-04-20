@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>גמרא Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1915;
+    --border: #2e2c26;
+    --accent: #c8973a;
+    --accent-dim: #8a6424;
+    --gold-light: #f0c96a;
+    --text: #e8e0ce;
+    --text-dim: #7a7060;
+    --learned: #3a6644;
+    --learned-border: #5a9e6a;
+    --learned-text: #a8e6b8;
+    --amud-a: #1f1e1a;
+    --amud-b: #191815;
+    --radius: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* HEADER */
+  header {
+    padding: 36px 40px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    background: linear-gradient(180deg, #151410 0%, transparent 100%);
+  }
+
+  header h1 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: var(--gold-light);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  header .subtitle {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding-bottom: 4px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 40px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 14px 22px;
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    outline: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--gold-light);
+    border-bottom-color: var(--accent);
+  }
+  .tab .tab-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-left: 6px;
+  }
+  .tab.active .tab-count { color: var(--accent-dim); }
+
+  /* MASECHET VIEW */
+  .masechet-view {
+    display: none;
+    padding: 32px 40px;
+  }
+  .masechet-view.active { display: block; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+  .stat-value.dim { color: var(--text-dim); }
+  .stat-value.green { color: var(--learned-text); }
+
+  .progress-bar {
+    flex: 1;
+    min-width: 200px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--gold-light));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .btn-clear {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .btn-clear:hover { color: #c08070; border-color: #c08070; }
+
+  /* DAF GRID */
+  .daf-section-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  .daf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+
+  .amud-cell {
+    position: relative;
+    padding: 9px 8px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    user-select: none;
+    background: var(--amud-a);
+    transition: border-color 0.12s, background 0.12s, transform 0.08s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .amud-cell:nth-child(even) { background: var(--amud-b); }
+
+  .amud-cell:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+  }
+
+  .amud-cell.learned {
+    background: var(--learned);
+    border-color: var(--learned-border);
+  }
+
+  .amud-cell .daf-num {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .amud-cell.learned .daf-num { color: var(--learned-text); }
+
+  .amud-cell .amud-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .amud-cell.learned .amud-label { color: #7acc90; }
+
+  .amud-cell .check {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    font-size: 0.55rem;
+    color: var(--learned-text);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .amud-cell.learned .check { opacity: 1; }
+
+  /* OVERVIEW TAB */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 32px 40px;
+  }
+
+  .overview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .overview-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-2px);
+  }
+
+  .overview-card h2 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-bottom: 14px;
+  }
+
+  .ov-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .ov-stat-row span:last-child { color: var(--text); }
+
+  .ov-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .ov-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--gold-light));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    header { padding: 24px 16px 20px; }
+    header h1 { font-size: 2rem; }
+    .tabs { padding: 0 16px; }
+    .masechet-view { padding: 20px 16px; }
+    .overview-grid { padding: 20px 16px; }
+    .daf-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>גמרא Tracker</h1>
+  </div>
+  <div class="subtitle">Bavli · Personal Limud Log</div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+<div id="views"></div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────
+const MASECHTOT = [
+  { id: 'overview', name: 'Overview', dapim: null },
+  { id: 'megillah', name: 'מגילה', transliteration: 'Megillah', start: 2, end: 32 },
+  { id: 'beitzah',  name: 'ביצה',   transliteration: 'Beitzah',  start: 2, end: 40 },
+  { id: 'rosh_hashana', name: 'ראש השנה', transliteration: 'Rosh Hashana', start: 2, end: 35 },
+  { id: 'makkot',  name: 'מכות',   transliteration: 'Makkot',   start: 2, end: 24 },
+  { id: 'taanis',  name: 'תענית',  transliteration: "Ta'anis",  start: 2, end: 31 },
+];
+
+// Build list of all amudim for a masechet
+function getAmudim(m) {
+  const list = [];
+  for (let daf = m.start; daf <= m.end; daf++) {
+    list.push({ daf, amud: 'a', key: `${daf}a` });
+    if (daf < m.end) {
+      list.push({ daf, amud: 'b', key: `${daf}b` });
+    } else {
+      // last daf only has amud a traditionally, but include b for completion
+      list.push({ daf, amud: 'b', key: `${daf}b` });
+    }
+  }
+  return list;
+}
+
+// ── STORAGE ─────────────────────────────────────────────────────────────
+function storageKey(mId) { return `gemara_${mId}`; }
+
+function getLearnedSet(mId) {
+  try {
+    const raw = localStorage.getItem(storageKey(mId));
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+function saveLearnedSet(mId, set) {
+  localStorage.setItem(storageKey(mId), JSON.stringify([...set]));
+}
+
+function toggleAmud(mId, amudKey) {
+  const set = getLearnedSet(mId);
+  if (set.has(amudKey)) set.delete(amudKey);
+  else set.add(amudKey);
+  saveLearnedSet(mId, set);
+  return set;
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────
+const tabsEl = document.getElementById('tabs');
+const viewsEl = document.getElementById('views');
+
+let activeTab = 'overview';
+
+function renderTabs() {
+  tabsEl.innerHTML = '';
+  MASECHTOT.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (m.id === activeTab ? ' active' : '');
+    if (m.id === 'overview') {
+      btn.textContent = 'Overview';
+    } else {
+      const amudim = getAmudim(m);
+      const learned = getLearnedSet(m.id);
+      btn.innerHTML = `${m.transliteration} <span class="tab-count">${learned.size}/${amudim.length}</span>`;
+    }
+    btn.addEventListener('click', () => { activeTab = m.id; renderAll(); });
+    tabsEl.appendChild(btn);
+  });
+}
+
+function renderOverview() {
+  const div = document.createElement('div');
+  div.className = 'overview-grid' + (activeTab === 'overview' ? '' : ' hidden');
+  div.id = 'view-overview';
+  if (activeTab !== 'overview') div.style.display = 'none';
+
+  MASECHTOT.filter(m => m.id !== 'overview').forEach(m => {
+    const amudim = getAmudim(m);
+    const learned = getLearnedSet(m.id);
+    const total = amudim.length;
+    const done = learned.size;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const dafDone = Math.floor(done / 2);
+    const dafTotal = Math.floor(total / 2);
+
+    const card = document.createElement('div');
+    card.className = 'overview-card';
+    card.innerHTML = `
+      <h2>${m.name} <small style="font-size:0.7rem;color:var(--text-dim);font-weight:400">${m.transliteration}</small></h2>
+      <div class="ov-stat-row"><span>Amudim learned</span><span>${done} / ${total}</span></div>
+      <div class="ov-stat-row"><span>Dapim (approx)</span><span>${dafDone} / ${dafTotal}</span></div>
+      <div class="ov-stat-row"><span>Remaining amudim</span><span>${total - done}</span></div>
+      <div class="ov-stat-row"><span>Complete</span><span>${pct}%</span></div>
+      <div class="ov-bar"><div class="ov-fill" style="width:${pct}%"></div></div>
+    `;
+    card.addEventListener('click', () => { activeTab = m.id; renderAll(); });
+    div.appendChild(card);
+  });
+
+  return div;
+}
+
+function renderMasechet(m) {
+  const amudim = getAmudim(m);
+  let learned = getLearnedSet(m.id);
+  const total = amudim.length;
+
+  const container = document.createElement('div');
+  container.className = 'masechet-view' + (activeTab === m.id ? ' active' : '');
+  container.id = `view-${m.id}`;
+
+  function rebuildStats() {
+    const done = learned.size;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const remaining = total - done;
+    container.querySelector('.stat-value.done').textContent = done;
+    container.querySelector('.stat-value.remaining').textContent = remaining;
+    container.querySelector('.stat-value.pct').textContent = pct + '%';
+    container.querySelector('.progress-fill').style.width = pct + '%';
+  }
+
+  const statsBar = document.createElement('div');
+  statsBar.className = 'stats-bar';
+  statsBar.innerHTML = `
+    <div class="stat">
+      <span class="stat-label">Learned</span>
+      <span class="stat-value green done">${learned.size}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Remaining</span>
+      <span class="stat-value dim remaining">${total - learned.size}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Total amudim</span>
+      <span class="stat-value dim">${total}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Complete</span>
+      <span class="stat-value pct">${total ? Math.round(learned.size/total*100) : 0}%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:${total ? Math.round(learned.size/total*100) : 0}%"></div>
+    </div>
+    <button class="btn-clear" id="clear-${m.id}">Clear all</button>
+  `;
+  container.appendChild(statsBar);
+
+  const label = document.createElement('div');
+  label.className = 'daf-section-label';
+  label.textContent = `${m.transliteration} · Daf ${m.start}a – ${m.end}b`;
+  container.appendChild(label);
+
+  const grid = document.createElement('div');
+  grid.className = 'daf-grid';
+
+  amudim.forEach(({ daf, amud, key }) => {
+    const cell = document.createElement('div');
+    cell.className = 'amud-cell' + (learned.has(key) ? ' learned' : '');
+    cell.dataset.key = key;
+    cell.innerHTML = `
+      <span class="check">✓</span>
+      <span class="daf-num">${daf}</span>
+      <span class="amud-label">${amud}</span>
+    `;
+    cell.addEventListener('click', () => {
+      learned = toggleAmud(m.id, key);
+      cell.classList.toggle('learned', learned.has(key));
+      rebuildStats();
+      // update tab count
+      renderTabs();
+    });
+    grid.appendChild(cell);
+  });
+
+  container.appendChild(grid);
+
+  // Clear button
+  setTimeout(() => {
+    const clearBtn = container.querySelector(`#clear-${m.id}`);
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (confirm(`Clear all progress for ${m.transliteration}?`)) {
+          learned = new Set();
+          saveLearnedSet(m.id, learned);
+          grid.querySelectorAll('.amud-cell').forEach(c => c.classList.remove('learned'));
+          rebuildStats();
+          renderTabs();
+        }
+      });
+    }
+  }, 0);
+
+  return container;
+}
+
+function renderAll() {
+  viewsEl.innerHTML = '';
+
+  const overviewEl = renderOverview();
+  overviewEl.style.display = activeTab === 'overview' ? '' : 'none';
+  viewsEl.appendChild(overviewEl);
+
+  MASECHTOT.filter(m => m.id !== 'overview').forEach(m => {
+    const el = renderMasechet(m);
+    el.style.display = activeTab === m.id ? '' : 'none';
+    if (activeTab === m.id) el.classList.add('active');
+    viewsEl.appendChild(el);
+  });
+
+  renderTabs();
+}
+
+renderAll();
+</script>
+</body>
+</html>
