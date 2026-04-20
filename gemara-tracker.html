@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>גמרא Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1915;
+    --border: #2e2c26;
+    --accent: #c8973a;
+    --accent-dim: #8a6424;
+    --gold-light: #f0c96a;
+    --text: #e8e0ce;
+    --text-dim: #7a7060;
+    --learned: #3a6644;
+    --learned-border: #5a9e6a;
+    --learned-text: #a8e6b8;
+    --amud-a: #1f1e1a;
+    --amud-b: #191815;
+    --radius: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* HEADER */
+  header {
+    padding: 36px 40px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    background: linear-gradient(180deg, #151410 0%, transparent 100%);
+  }
+
+  header h1 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: var(--gold-light);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  header .subtitle {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding-bottom: 4px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 40px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 14px 22px;
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    outline: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--gold-light);
+    border-bottom-color: var(--accent);
+  }
+  .tab .tab-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-left: 6px;
+  }
+  .tab.active .tab-count { color: var(--accent-dim); }
+
+  /* MASECHET VIEW */
+  .masechet-view {
+    display: none;
+    padding: 32px 40px;
+  }
+  .masechet-view.active { display: block; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+  .stat-value.dim { color: var(--text-dim); }
+  .stat-value.green { color: var(--learned-text); }
+
+  .progress-bar {
+    flex: 1;
+    min-width: 200px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--gold-light));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .btn-clear {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .btn-clear:hover { color: #c08070; border-color: #c08070; }
+
+  /* DAF GRID */
+  .daf-section-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  .daf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+
+  .amud-cell {
+    position: relative;
+    padding: 9px 8px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    user-select: none;
+    background: var(--amud-a);
+    transition: border-color 0.12s, background 0.12s, transform 0.08s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .amud-cell:nth-child(even) { background: var(--amud-b); }
+
+  .amud-cell:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+  }
+
+  .amud-cell.learned {
+    background: var(--learned);
+    border-color: var(--learned-border);
+  }
+
+  .amud-cell .daf-num {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .amud-cell.learned .daf-num { color: var(--learned-text); }
+
+  .amud-cell .amud-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .amud-cell.learned .amud-label { color: #7acc90; }
+
+  .amud-cell .check {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    font-size: 0.55rem;
+    color: var(--learned-text);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .amud-cell.learned .check { opacity: 1; }
+
+  /* SECTION LABELS */
+  .section-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 28px 40px 0;
+    font-weight: 500;
+  }
+
+  .seder-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 18px 40px 8px;
+  }
+
+  /* SHAS COMPACT GRID */
+  .shas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    padding: 0 40px 8px;
+  }
+
+  .shas-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    cursor: default;
+  }
+
+  .shas-card-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .shas-name {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .shas-translit {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+  }
+
+  .shas-dapim {
+    font-size: 0.6rem;
+    color: var(--accent-dim);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  /* OVERVIEW TAB */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 16px 40px 8px;
+  }
+
+  .overview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .overview-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-2px);
+  }
+
+  .overview-card h2 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-bottom: 14px;
+  }
+
+  .ov-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .ov-stat-row span:last-child { color: var(--text); }
+
+  .ov-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .ov-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--gold-light));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    header { padding: 24px 16px 20px; }
+    header h1 { font-size: 2rem; }
+    .tabs { padding: 0 16px; }
+    .masechet-view { padding: 20px 16px; }
+    .overview-grid { padding: 16px 16px 8px; }
+    .section-label { padding: 20px 16px 0; }
+    .seder-label { padding: 14px 16px 6px; }
+    .shas-grid { padding: 0 16px 8px; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+    .daf-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>גמרא Tracker</h1>
+  </div>
+  <div class="subtitle">Bavli · Personal Limud Log</div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+<div id="views"></div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────
+// active: has full amud grid + tab. shas_only: shown in overview Shas section only.
+const ACTIVE_MASECHTOT = [
+  { id: 'megillah',     name: 'מגילה',     transliteration: 'Megillah',     start: 2, end: 32 },
+  { id: 'beitzah',      name: 'ביצה',      transliteration: 'Beitzah',      start: 2, end: 40 },
+  { id: 'rosh_hashana', name: 'ראש השנה',  transliteration: 'Rosh Hashana', start: 2, end: 35 },
+  { id: 'makkot',       name: 'מכות',      transliteration: 'Makkot',       start: 2, end: 24 },
+  { id: 'taanis',       name: 'תענית',     transliteration: "Ta'anis",      start: 2, end: 31 },
+];
+
+// All of Shas grouped by seder, excluding the active ones above
+const SHAS = [
+  { seder: 'Zeraim', masechtot: [
+    { id: 'brachos', name: 'ברכות', transliteration: 'Brachos', start: 2, end: 64 },
+  ]},
+  { seder: 'Moed', masechtot: [
+    { id: 'shabbos',    name: 'שבת',       transliteration: 'Shabbos',    start: 2, end: 157 },
+    { id: 'eruvin',     name: 'עירובין',   transliteration: 'Eruvin',     start: 2, end: 105 },
+    { id: 'pesachim',   name: 'פסחים',     transliteration: 'Pesachim',   start: 2, end: 121 },
+    { id: 'shekalim',   name: 'שקלים',     transliteration: 'Shekalim',   start: 2, end: 22  },
+    { id: 'yoma',       name: 'יומא',      transliteration: 'Yoma',       start: 2, end: 88  },
+    { id: 'sukkah',     name: 'סוכה',      transliteration: 'Sukkah',     start: 2, end: 56  },
+    // Beitzah, Rosh Hashana, Taanis are active
+    { id: 'moed_katan', name: "מועד קטן",  transliteration: "Mo'ed Katan",start: 2, end: 29  },
+    { id: 'chagigah',   name: 'חגיגה',     transliteration: 'Chagigah',   start: 2, end: 27  },
+  ]},
+  { seder: 'Nashim', masechtot: [
+    { id: 'yevamos',  name: 'יבמות',   transliteration: 'Yevamos',  start: 2, end: 122 },
+    { id: 'kesubos',  name: 'כתובות',  transliteration: 'Kesubos',  start: 2, end: 112 },
+    { id: 'nedarim',  name: 'נדרים',   transliteration: 'Nedarim',  start: 2, end: 91  },
+    { id: 'nazir',    name: 'נזיר',    transliteration: 'Nazir',    start: 2, end: 66  },
+    { id: 'sotah',    name: 'סוטה',    transliteration: 'Sotah',    start: 2, end: 49  },
+    { id: 'gittin',   name: 'גיטין',   transliteration: 'Gittin',   start: 2, end: 90  },
+    { id: 'kiddushin',name: 'קידושין', transliteration: 'Kiddushin',start: 2, end: 82  },
+  ]},
+  { seder: 'Nezikin', masechtot: [
+    { id: 'bk',         name: 'בבא קמא',    transliteration: 'Bava Kamma',   start: 2, end: 119 },
+    { id: 'bm',         name: 'בבא מציעא',  transliteration: 'Bava Metzia',  start: 2, end: 119 },
+    { id: 'bb',         name: 'בבא בתרא',   transliteration: 'Bava Basra',   start: 2, end: 176 },
+    { id: 'sanhedrin',  name: 'סנהדרין',    transliteration: 'Sanhedrin',    start: 2, end: 113 },
+    // Makkot is active
+    { id: 'shevuos',    name: 'שבועות',     transliteration: 'Shevuos',      start: 2, end: 49  },
+    { id: 'avoda_zara', name: 'עבודה זרה',  transliteration: 'Avoda Zara',   start: 2, end: 76  },
+    { id: 'horayos',    name: 'הוריות',     transliteration: 'Horayos',      start: 2, end: 14  },
+  ]},
+  { seder: 'Kodashim', masechtot: [
+    { id: 'zevachim',   name: 'זבחים',      transliteration: 'Zevachim',     start: 2, end: 120 },
+    { id: 'menachos',   name: 'מנחות',      transliteration: 'Menachos',     start: 2, end: 110 },
+    { id: 'chulin',     name: 'חולין',      transliteration: 'Chulin',       start: 2, end: 142 },
+    { id: 'bechoros',   name: 'בכורות',     transliteration: 'Bechoros',     start: 2, end: 61  },
+    { id: 'erchin',     name: 'ערכין',      transliteration: 'Erchin',       start: 2, end: 34  },
+    { id: 'temurah',    name: 'תמורה',      transliteration: 'Temurah',      start: 2, end: 34  },
+    { id: 'kerisos',    name: 'כריתות',     transliteration: 'Kerisos',      start: 2, end: 28  },
+    { id: 'meilah',     name: 'מעילה',      transliteration: 'Meilah',       start: 2, end: 22  },
+    { id: 'niddah',     name: 'נדה',        transliteration: 'Niddah',       start: 2, end: 73  },
+  ]},
+];
+
+const MASECHTOT = [{ id: 'overview', name: 'Overview' }, ...ACTIVE_MASECHTOT];
+
+// Build list of all amudim for a masechet
+function getAmudim(m) {
+  const list = [];
+  for (let daf = m.start; daf <= m.end; daf++) {
+    list.push({ daf, amud: 'a', key: `${daf}a` });
+    if (daf < m.end) {
+      list.push({ daf, amud: 'b', key: `${daf}b` });
+    } else {
+      // last daf only has amud a traditionally, but include b for completion
+      list.push({ daf, amud: 'b', key: `${daf}b` });
+    }
+  }
+  return list;
+}
+
+// ── STORAGE ─────────────────────────────────────────────────────────────
+function storageKey(mId) { return `gemara_${mId}`; }
+
+function getLearnedSet(mId) {
+  try {
+    const raw = localStorage.getItem(storageKey(mId));
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+function saveLearnedSet(mId, set) {
+  localStorage.setItem(storageKey(mId), JSON.stringify([...set]));
+}
+
+function toggleAmud(mId, amudKey) {
+  const set = getLearnedSet(mId);
+  if (set.has(amudKey)) set.delete(amudKey);
+  else set.add(amudKey);
+  saveLearnedSet(mId, set);
+  return set;
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────
+const tabsEl = document.getElementById('tabs');
+const viewsEl = document.getElementById('views');
+
+let activeTab = 'overview';
+
+function renderTabs() {
+  tabsEl.innerHTML = '';
+  MASECHTOT.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (m.id === activeTab ? ' active' : '');
+    if (m.id === 'overview') {
+      btn.textContent = 'Overview';
+    } else {
+      const amudim = getAmudim(m);
+      const learned = getLearnedSet(m.id);
+      btn.innerHTML = `${m.transliteration} <span class="tab-count">${learned.size}/${amudim.length}</span>`;
+    }
+    btn.addEventListener('click', () => { activeTab = m.id; renderAll(); });
+    tabsEl.appendChild(btn);
+  });
+}
+
+function makeActiveCard(m) {
+  const amudim = getAmudim(m);
+  const learned = getLearnedSet(m.id);
+  const total = amudim.length;
+  const done = learned.size;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const totalDapim = m.end - m.start + 1;
+  let dafDone = 0;
+  for (let d = m.start; d <= m.end; d++) {
+    if (learned.has(`${d}a`) && learned.has(`${d}b`)) dafDone++;
+  }
+  const card = document.createElement('div');
+  card.className = 'overview-card';
+  card.innerHTML = `
+    <h2>${m.name} <small style="font-size:0.7rem;color:var(--text-dim);font-weight:400">${m.transliteration}</small></h2>
+    <div class="ov-stat-row"><span>Dapim learned</span><span>${dafDone} / ${totalDapim}</span></div>
+    <div class="ov-stat-row"><span>Dapim remaining</span><span>${totalDapim - dafDone}</span></div>
+    <div class="ov-stat-row"><span>Amudim learned</span><span>${done} / ${total}</span></div>
+    <div class="ov-stat-row"><span>Amudim remaining</span><span>${total - done}</span></div>
+    <div class="ov-stat-row"><span>Complete</span><span>${pct}%</span></div>
+    <div class="ov-bar"><div class="ov-fill" style="width:${pct}%"></div></div>
+  `;
+  card.addEventListener('click', () => { activeTab = m.id; renderAll(); });
+  return card;
+}
+
+function makeShasCard(m) {
+  const totalDapim = m.end - m.start + 1;
+  const card = document.createElement('div');
+  card.className = 'overview-card shas-card';
+  card.innerHTML = `
+    <div class="shas-card-inner">
+      <span class="shas-name">${m.name}</span>
+      <span class="shas-translit">${m.transliteration}</span>
+      <span class="shas-dapim">${totalDapim} dapim</span>
+    </div>
+  `;
+  return card;
+}
+
+function renderOverview() {
+  const wrapper = document.createElement('div');
+  wrapper.id = 'view-overview';
+  if (activeTab !== 'overview') { wrapper.style.display = 'none'; return wrapper; }
+
+  // ── My Masechtot ──
+  const myLabel = document.createElement('div');
+  myLabel.className = 'section-label';
+  myLabel.textContent = 'My Masechtot';
+  wrapper.appendChild(myLabel);
+
+  const myGrid = document.createElement('div');
+  myGrid.className = 'overview-grid';
+  ACTIVE_MASECHTOT.forEach(m => myGrid.appendChild(makeActiveCard(m)));
+  wrapper.appendChild(myGrid);
+
+  // ── All of Shas ──
+  const shasLabel = document.createElement('div');
+  shasLabel.className = 'section-label';
+  shasLabel.textContent = 'All of Shas';
+  wrapper.appendChild(shasLabel);
+
+  SHAS.forEach(seder => {
+    const sederLabel = document.createElement('div');
+    sederLabel.className = 'seder-label';
+    sederLabel.textContent = `Seder ${seder.seder}`;
+    wrapper.appendChild(sederLabel);
+
+    const grid = document.createElement('div');
+    grid.className = 'shas-grid';
+    seder.masechtot.forEach(m => grid.appendChild(makeShasCard(m)));
+    wrapper.appendChild(grid);
+  });
+
+  return wrapper;
+}
+
+function renderMasechet(m) {
+  const amudim = getAmudim(m);
+  let learned = getLearnedSet(m.id);
+  const total = amudim.length;
+
+  const container = document.createElement('div');
+  container.className = 'masechet-view' + (activeTab === m.id ? ' active' : '');
+  container.id = `view-${m.id}`;
+
+  function countDapim(learnedSet) {
+    let complete = 0;
+    for (let daf = m.start; daf <= m.end; daf++) {
+      if (learnedSet.has(`${daf}a`) && learnedSet.has(`${daf}b`)) complete++;
+    }
+    return complete;
+  }
+
+  const totalDapim = m.end - m.start + 1;
+
+  function rebuildStats() {
+    const done = learned.size;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const remaining = total - done;
+    const dapimDone = countDapim(learned);
+    const dapimRemaining = totalDapim - dapimDone;
+    container.querySelector('.stat-value.amudim-done').textContent = done;
+    container.querySelector('.stat-value.amudim-remaining').textContent = remaining;
+    container.querySelector('.stat-value.dapim-done').textContent = dapimDone;
+    container.querySelector('.stat-value.dapim-remaining').textContent = dapimRemaining;
+    container.querySelector('.stat-value.pct').textContent = pct + '%';
+    container.querySelector('.progress-fill').style.width = pct + '%';
+  }
+
+  const statsBar = document.createElement('div');
+  statsBar.className = 'stats-bar';
+  statsBar.innerHTML = `
+    <div class="stat">
+      <span class="stat-label">Dapim learned</span>
+      <span class="stat-value green dapim-done">${countDapim(learned)}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Dapim remaining</span>
+      <span class="stat-value dim dapim-remaining">${totalDapim - countDapim(learned)}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Amudim learned</span>
+      <span class="stat-value green amudim-done">${learned.size}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Amudim remaining</span>
+      <span class="stat-value dim amudim-remaining">${total - learned.size}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Complete</span>
+      <span class="stat-value pct">${total ? Math.round(learned.size/total*100) : 0}%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:${total ? Math.round(learned.size/total*100) : 0}%"></div>
+    </div>
+    <button class="btn-clear" id="clear-${m.id}">Clear all</button>
+  `;
+  container.appendChild(statsBar);
+
+  const label = document.createElement('div');
+  label.className = 'daf-section-label';
+  label.textContent = `${m.transliteration} · Daf ${m.start}a – ${m.end}b`;
+  container.appendChild(label);
+
+  const grid = document.createElement('div');
+  grid.className = 'daf-grid';
+
+  amudim.forEach(({ daf, amud, key }) => {
+    const cell = document.createElement('div');
+    cell.className = 'amud-cell' + (learned.has(key) ? ' learned' : '');
+    cell.dataset.key = key;
+    cell.innerHTML = `
+      <span class="check">✓</span>
+      <span class="daf-num">${daf}</span>
+      <span class="amud-label">${amud}</span>
+    `;
+    cell.addEventListener('click', () => {
+      learned = toggleAmud(m.id, key);
+      cell.classList.toggle('learned', learned.has(key));
+      rebuildStats();
+      // update tab count
+      renderTabs();
+    });
+    grid.appendChild(cell);
+  });
+
+  container.appendChild(grid);
+
+  // Clear button
+  setTimeout(() => {
+    const clearBtn = container.querySelector(`#clear-${m.id}`);
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (confirm(`Clear all progress for ${m.transliteration}?`)) {
+          learned = new Set();
+          saveLearnedSet(m.id, learned);
+          grid.querySelectorAll('.amud-cell').forEach(c => c.classList.remove('learned'));
+          rebuildStats();
+          renderTabs();
+        }
+      });
+    }
+  }, 0);
+
+  return container;
+}
+
+function renderAll() {
+  viewsEl.innerHTML = '';
+
+  const overviewEl = renderOverview();
+  overviewEl.style.display = activeTab === 'overview' ? '' : 'none';
+  viewsEl.appendChild(overviewEl);
+
+  MASECHTOT.filter(m => m.id !== 'overview').forEach(m => {
+    const el = renderMasechet(m);
+    el.style.display = activeTab === m.id ? '' : 'none';
+    if (activeTab === m.id) el.classList.add('active');
+    viewsEl.appendChild(el);
+  });
+
+  renderTabs();
+}
+
+renderAll();
+</script>
+</body>
+</html>
