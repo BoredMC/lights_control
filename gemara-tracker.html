@@ -3,43 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>גמרא Tracker</title>
+<title>לימוד Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<!--
-  ═══════════════════════════════════════════════════════════════
-  CLOUD SYNC SETUP (do this once — takes about 5 minutes)
-  ═══════════════════════════════════════════════════════════════
-  1. Go to https://console.firebase.google.com → "Add project" (free).
-  2. In the left sidebar: Build → Authentication → Get started →
-     under "Sign-in method" enable "Email/Password".
-  3. In the left sidebar: Build → Firestore Database → Create database
-     (any region is fine, start in "production mode").
-  4. In Firestore → Rules tab, replace the contents with:
-
-       rules_version = '2';
-       service cloud.firestore {
-         match /databases/{database}/documents {
-           match /users/{userId} {
-             allow read, write: if request.auth != null && request.auth.uid == userId;
-           }
-         }
-       }
-
-  5. Click the gear icon → Project settings → scroll to "Your apps" →
-     click the </> (web) icon → register the app → it will show you
-     a `firebaseConfig` object. Copy it into the JS below, replacing
-     the placeholder values.
-  6. Still in Project settings, or under Authentication → Settings →
-     Authorized domains, add the domain this page is hosted on, e.g.
-     yourusername.github.io (GitHub Pages domains aren't authorized
-     by default, so sign-in will fail until you add it).
-  That's it — reload the page and "Sign In to Sync" will work.
-  Until you do this, the tracker keeps working exactly as before,
-  saving locally to this browser only.
-  ═══════════════════════════════════════════════════════════════
--->
 <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
@@ -67,14 +34,27 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monosp
 header {
   padding: 30px 40px 24px;
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;
   background: linear-gradient(180deg,#151410 0%,transparent 100%);
 }
-header h1 { font-family:'Frank Ruhl Libre',serif; font-size:2.4rem; font-weight:900; color:var(--gold-light); letter-spacing:-0.02em; line-height:1; }
-header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12em; text-transform:uppercase; padding-bottom:3px; }
+.header-left h1 { font-family:'Frank Ruhl Libre',serif; font-size:2.4rem; font-weight:900; color:var(--gold-light); letter-spacing:-0.02em; line-height:1; }
+.header-left .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12em; text-transform:uppercase; padding-bottom:3px; margin-top:8px;}
+
+/* MODE SWITCHER */
+.mode-switch {
+  display: flex; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px; gap: 4px;
+}
+.mode-btn {
+  background: none; border: none; padding: 8px 16px; font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1rem; color: var(--text-dim); cursor: pointer; border-radius: 6px;
+  transition: all 0.2s; outline: none;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active { background: var(--accent-dim); color: var(--text); font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 
 /* ACCOUNT BAR */
-.account-bar { margin-left:auto; display:flex; align-items:center; gap:10px; align-self:center; font-size:0.62rem; color:var(--text-dim); flex-wrap:wrap; }
+.account-bar { display:flex; align-items:center; gap:10px; align-self:center; font-size:0.62rem; color:var(--text-dim); flex-wrap:wrap; }
 .account-bar .email { color:var(--text); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .account-bar .confignote { opacity:0.55; letter-spacing:0.04em; }
 .sync-dot { width:6px; height:6px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
@@ -138,12 +118,10 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 .amud-cell .ck { position:absolute; top:3px; right:4px; font-size:0.5rem; color:var(--learned-text); opacity:0; transition:opacity .12s; }
 .amud-cell.learned .ck { opacity:1; }
 
-/* ── OVERVIEW ── */
+/* OVERVIEW */
 .ov-section-title { font-size:0.6rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:12px; margin-top:28px; }
 .ov-section-title:first-child { margin-top:0; }
-
 .ov-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin-bottom:8px; }
-
 .ov-card {
   background:var(--surface); border:1px solid var(--border); border-radius:10px;
   padding:16px 18px; cursor:pointer; transition:border-color .15s,transform .1s;
@@ -184,14 +162,10 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 .mini-card-info .pct { color:var(--accent); }
 .mini-card.completed .mini-card-info .pct { color:var(--learned-text); }
 
-
 /* SHAS AGGREGATE BANNER */
 .shas-banner {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px 24px 16px;
-  margin-bottom: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 24px 16px; margin-bottom: 4px;
 }
 .shas-banner-stats { display:flex; flex-wrap:wrap; gap:24px; margin-bottom:14px; }
 .shas-stat { display:flex; flex-direction:column; gap:3px; }
@@ -203,7 +177,7 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 .shas-banner-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:3px; transition:width .4s; }
 .shas-banner-sub { font-size:0.6rem; color:var(--text-dim); letter-spacing:0.06em; }
 
-/* ── AUTH / SYNC MODALS ── */
+/* AUTH MODALS */
 .modal-overlay { position:fixed; inset:0; background:rgba(10,9,7,0.82); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
 .modal-overlay.hidden { display:none; }
 .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 26px; max-width:380px; width:100%; }
@@ -223,11 +197,9 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 .modal-error { font-size:0.62rem; color:#e08a8a; margin-top:8px; min-height:14px; line-height:1.5; }
 .modal-msg { font-size:0.62rem; color:var(--learned-text); margin-top:8px; min-height:14px; line-height:1.5; }
 
-/* RESPONSIVE */
 @media(max-width:600px){
   header { padding:20px 16px 18px; }
   header h1 { font-size:2rem; }
-  .account-bar { width:100%; margin-left:0; justify-content:space-between; margin-top:6px; }
   .tabs { padding:0 16px; }
   .view { padding:20px 16px 60px; }
   .ov-grid { grid-template-columns:1fr 1fr; }
@@ -241,8 +213,14 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 <body>
 
 <header>
-  <div><h1>גמרא Tracker</h1></div>
-  <div class="subtitle">Bavli · Personal Limud Log</div>
+  <div class="header-left">
+    <h1>לימוד Tracker</h1>
+    <div class="subtitle">Bavli & Mishnayos · Personal Limud Log</div>
+  </div>
+  <div class="mode-switch">
+    <button id="mode-bavli" class="mode-btn active">Bavli</button>
+    <button id="mode-mishna" class="mode-btn">Mishnah</button>
+  </div>
   <div class="account-bar" id="accountBar"></div>
 </header>
 
@@ -250,7 +228,7 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 <div class="modal-overlay hidden" id="authOverlay">
   <div class="modal-box">
     <h2>Sync Your Progress</h2>
-    <div class="modal-sub">Sign in to keep your Gemara progress in sync across every device you learn from.</div>
+    <div class="modal-sub">Sign in to keep your Limud progress in sync across every device.</div>
     <div class="field">
       <label for="authEmail">Email</label>
       <input type="email" id="authEmail" autocomplete="email" />
@@ -270,7 +248,7 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
   </div>
 </div>
 
-<!-- CONFLICT RESOLUTION MODAL (shown once, only if local + cloud both have progress) -->
+<!-- CONFLICT RESOLUTION MODAL -->
 <div class="modal-overlay hidden" id="conflictOverlay">
   <div class="modal-box">
     <h2>Progress Found in Two Places</h2>
@@ -288,78 +266,76 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// DATA — all of Shas with correct daf ranges and perakim
+// DATA — BAVLI (IDs kept as original to prevent data loss)
 // ═══════════════════════════════════════════════════════════════
-
 const SHAS = [
 { seder:'Zeraim', masechtot:[
-  { id:'brachos', he:'ברכות', en:'Brachos', start:2, end:64, perakim:[
+  { id:'brachos', he:'ברכות', en:'Brachos', type:'bavli', start:2, end:64, perakim:[
     {name:'מאימתי',start:2},{name:'היה קורא',start:13},{name:'מי שמתו',start:17},
     {name:'תפלת השחר',start:26},{name:'אין עומדין',start:30},{name:'כיצד מברכין',start:35},
     {name:'שלשה שאכלו',start:45},{name:'אלו דברים',start:51},{name:'הרואה',start:54}
   ]},
 ]},
 { seder:'Moed', masechtot:[
-  { id:'shabbos', he:'שבת', en:'Shabbos', start:2, end:157, perakim:[
+  { id:'shabbos', he:'שבת', en:'Shabbos', type:'bavli', start:2, end:157, perakim:[
     {name:'יציאות השבת',start:2},{name:'במה מדליקין',start:25},{name:'כל כתבי',start:115},
     {name:'כירה',start:36},{name:'במה טומנין',start:47},{name:'במה אשה',start:57},
     {name:'שמנה שרצים',start:107},{name:'המצניע',start:91},{name:'הזורק',start:96},
     {name:'המוציא יין',start:78},{name:'רבי עקיבא',start:73},{name:'הבונה',start:102},
     {name:'אמר רבי עקיבא',start:106},{name:'שני שבתות',start:68},
     {name:'מי שהחשיך',start:150},{name:'כל כלי',start:122},{name:'רבי אליעזר',start:128},
-    {name:'טז - כלל גדול',start:70},{name:'שבת', start:7},
-    {name:'כלל גדול',start:70},{name:'מפנין',start:126},{name:'נוטל',start:141},
+    {name:'שבת', start:7},{name:'כלל גדול',start:70},{name:'מפנין',start:126},{name:'נוטל',start:141},
     {name:'חבית',start:146},{name:'יו״ח שחל',start:153}
   ]},
-  { id:'eruvin', he:'עירובין', en:'Eruvin', start:2, end:105, perakim:[
+  { id:'eruvin', he:'עירובין', en:'Eruvin', type:'bavli', start:2, end:105, perakim:[
     {name:'מבוי',start:2},{name:'עושין פסין',start:20},{name:'בכיצד משתתפין',start:49},
     {name:'הדר',start:61},{name:'כיצד מעברין',start:53},{name:'בהמה בסולם',start:76},
     {name:'המוצא תפילין',start:96},{name:'מי שהוציאוהו',start:40},{name:'הדר עם הנכרי',start:62},
     {name:'כל גגות',start:89}
   ]},
-  { id:'pesachim', he:'פסחים', en:'Pesachim', start:2, end:121, perakim:[
+  { id:'pesachim', he:'פסחים', en:'Pesachim', type:'bavli', start:2, end:121, perakim:[
     {name:'אור לארבעה עשר',start:2},{name:'כל שעה',start:21},{name:'אלו עוברין',start:42},
     {name:'מקום שנהגו',start:50},{name:'כיצד צולין',start:74},{name:'אלו דברים',start:96},
     {name:'אלו דברים שבין',start:70},{name:'האשה',start:88},{name:'מי שהיה',start:93},
     {name:'ערבי פסחים',start:99}
   ]},
-  { id:'shekalim', he:'שקלים', en:'Shekalim', start:2, end:22, perakim:[
+  { id:'shekalim', he:'שקלים', en:'Shekalim', type:'bavli', start:2, end:22, perakim:[
     {name:'בא׳ באדר',start:2},{name:'על מה מוסיפין',start:9},{name:'אף על פי',start:14},{name:'ריש לקיש',start:21}
   ]},
-  { id:'yoma', he:'יומא', en:'Yoma', start:2, end:88, perakim:[
+  { id:'yoma', he:'יומא', en:'Yoma', type:'bavli', start:2, end:88, perakim:[
     {name:'שבעת ימים',start:2},{name:'בראשונה',start:18},{name:'אמר להם הממונה',start:28},
     {name:'טרף בקלפי',start:39},{name:'הוציאו לו',start:52},{name:'בא לו',start:60},
     {name:'שני שעירי',start:62},{name:'יום הכיפורים',start:73}
   ]},
-  { id:'sukkah', he:'סוכה', en:'Sukkah', start:2, end:56, perakim:[
+  { id:'sukkah', he:'סוכה', en:'Sukkah', type:'bavli', start:2, end:56, perakim:[
     {name:'סוכה',start:2},{name:'הישן',start:20},{name:'לולב הגזול',start:29},
     {name:'לולב וערבה',start:41},{name:'החליל',start:50}
   ]},
-  { id:'beitzah', he:'ביצה', en:'Beitzah', start:2, end:40, perakim:[
+  { id:'beitzah', he:'ביצה', en:'Beitzah', type:'bavli', start:2, end:40, perakim:[
     {name:'ביצה',start:2},{name:'המביא',start:15},{name:'אין צדין',start:24},
     {name:'המביא כדי יין',start:30},{name:'אין צדין דגים',start:36}
   ]},
-  { id:'rosh_hashana', he:'ראש השנה', en:'Rosh Hashana', start:2, end:35, perakim:[
+  { id:'rosh_hashana', he:'ראש השנה', en:'Rosh Hashana', type:'bavli', start:2, end:35, perakim:[
     {name:'ארבעה ראשי שנים',start:2},{name:'ראוהו בית דין',start:20},
     {name:'ראש חדש',start:25},{name:'יום טוב של ראש',start:28}
   ]},
-  { id:'taanis', he:'תענית', en:"Ta'anis", start:2, end:31, perakim:[
+  { id:'taanis', he:'תענית', en:"Ta'anis", type:'bavli', start:2, end:31, perakim:[
     {name:'מאימתי מזכירין',start:2},{name:'בשלשה במרחשון',start:10},
     {name:'סדר תעניות',start:15},{name:'בשלשה פרקים',start:26}
   ]},
-  { id:'megillah', he:'מגילה', en:'Megillah', start:2, end:32, perakim:[
+  { id:'megillah', he:'מגילה', en:'Megillah', type:'bavli', start:2, end:32, perakim:[
     {name:'מגילה נקראת',start:2},{name:'הקורא את המגילה',start:17},
     {name:'בני העיר',start:26},{name:'הקורא עומד',start:21}
   ]},
-  { id:'moed_katan', he:'מועד קטן', en:"Mo'ed Katan", start:2, end:29, perakim:[
+  { id:'moed_katan', he:'מועד קטן', en:"Mo'ed Katan", type:'bavli', start:2, end:29, perakim:[
     {name:'משקין',start:2},{name:'מי שמת',start:14},{name:'ואלו מגלחין',start:18}
   ]},
-  { id:'chagigah', he:'חגיגה', en:'Chagigah', start:2, end:27, perakim:[
+  { id:'chagigah', he:'חגיגה', en:'Chagigah', type:'bavli', start:2, end:27, perakim:[
     {name:'הכל חייבין',start:2},{name:'אין דורשין',start:11},{name:'חומר בקודש',start:18}
   ]},
 ]},
 { seder:'Nashim', masechtot:[
-  { id:'yevamos', he:'יבמות', en:'Yevamos', start:2, end:122, perakim:[
+  { id:'yevamos', he:'יבמות', en:'Yevamos', type:'bavli', start:2, end:122, perakim:[
     {name:'חמש עשרה נשים',start:2},{name:'כיצד',start:17},{name:'ארבעה אחין',start:26},
     {name:'האשה רבה',start:27},{name:'יש מותרות',start:41},{name:'האשה שהלך',start:46},
     {name:'אלמנה לכהן גדול',start:59},{name:'הערל',start:70},{name:'הבא על יבמתו',start:80},
@@ -367,121 +343,121 @@ const SHAS = [
     {name:'ר׳ עקיבא',start:49},{name:'אלמנה',start:87},{name:'כיצד האשה',start:93},
     {name:'המפלת',start:36}
   ]},
-  { id:'kesubos', he:'כתובות', en:'Kesubos', start:2, end:112, perakim:[
+  { id:'kesubos', he:'כתובות', en:'Kesubos', type:'bavli', start:2, end:112, perakim:[
     {name:'בתולה',start:2},{name:'האשה שנתארמלה',start:16},{name:'אלו נערות',start:29},
     {name:'נערה שנתפתתה',start:38},{name:'אף על פי',start:47},{name:'המדיר',start:70},
     {name:'האשה שנפלו',start:78},{name:'הכותב לאשתו',start:83},{name:'אלמנה ניזונת',start:96},
     {name:'מי שהיה נשוי',start:91},{name:'נערה המאורסה',start:46},{name:'השולח',start:63},
     {name:'שני דייני',start:105}
   ]},
-  { id:'nedarim', he:'נדרים', en:'Nedarim', start:2, end:91, perakim:[
+  { id:'nedarim', he:'נדרים', en:'Nedarim', type:'bavli', start:2, end:91, perakim:[
     {name:'כל כינויי',start:2},{name:'ואלו מותרין',start:15},{name:'אף על פי',start:20},
     {name:'אין בין המודר',start:33},{name:'השותפין',start:45},{name:'הנודר מן המבושל',start:52},
     {name:'הנודר מן הירק',start:57},{name:'קונם יין',start:62},{name:'ר׳ אליעזר',start:66},
     {name:'נערה המאורסה',start:72},{name:'בית שמאי',start:85}
   ]},
-  { id:'nazir', he:'נזיר', en:'Nazir', start:2, end:66, perakim:[
+  { id:'nazir', he:'נזיר', en:'Nazir', type:'bavli', start:2, end:66, perakim:[
     {name:'כל כינויי נזירות',start:2},{name:'הריני נזיר',start:11},{name:'מי שאמר',start:17},
     {name:'בית שמאי',start:29},{name:'שמשון',start:4},{name:'כהן גדול',start:47},
     {name:'שני נזירים',start:57},{name:'הנזיר שגילח',start:45}
   ]},
-  { id:'sotah', he:'סוטה', en:'Sotah', start:2, end:49, perakim:[
+  { id:'sotah', he:'סוטה', en:'Sotah', type:'bavli', start:2, end:49, perakim:[
     {name:'המקנא',start:2},{name:'היה מביא',start:7},{name:'היה נוטל',start:14},
     {name:'ארוסה ושומרת',start:23},{name:'כשם',start:27},{name:'ואלו נאמרין',start:32},
     {name:'עגלה ערופה',start:44},{name:'משוח מלחמה',start:42},{name:'כהן משוח',start:47}
   ]},
-  { id:'gittin', he:'גיטין', en:'Gittin', start:2, end:90, perakim:[
+  { id:'gittin', he:'גיטין', en:'Gittin', type:'bavli', start:2, end:90, perakim:[
     {name:'המביא גט',start:2},{name:'המביא גט ממדינת',start:17},{name:'כל הגט',start:26},
     {name:'השולח',start:32},{name:'המגרש',start:45},{name:'הזורק',start:65},
     {name:'מי שאחזו',start:70},{name:'המפקיר שדהו',start:73},{name:'הגוזל בתרא',start:77}
   ]},
-  { id:'kiddushin', he:'קידושין', en:'Kiddushin', start:2, end:82, perakim:[
+  { id:'kiddushin', he:'קידושין', en:'Kiddushin', type:'bavli', start:2, end:82, perakim:[
     {name:'האשה נקנית',start:2},{name:'האיש מקדש',start:41},{name:'האשה נקנית ב',start:48},
     {name:'עשרה יוחסין',start:69}
   ]},
 ]},
 { seder:'Nezikin', masechtot:[
-  { id:'bk', he:'בבא קמא', en:'Bava Kamma', start:2, end:119, perakim:[
+  { id:'bk', he:'בבא קמא', en:'Bava Kamma', type:'bavli', start:2, end:119, perakim:[
     {name:'ארבעה אבות',start:2},{name:'כיצד הרגל',start:17},{name:'המניח',start:23},
     {name:'שור שנגח',start:33},{name:'שור שנגח ד',start:44},{name:'מרובה',start:62},
     {name:'החובל',start:83},{name:'הגוזל',start:94},{name:'הגוזל בתרא',start:113},
     {name:'הגוזל עצים',start:98}
   ]},
-  { id:'bm', he:'בבא מציעא', en:'Bava Metzia', start:2, end:119, perakim:[
+  { id:'bm', he:'בבא מציעא', en:'Bava Metzia', type:'bavli', start:2, end:119, perakim:[
     {name:'שנים אוחזין',start:2},{name:'אלו מציאות',start:21},{name:'המפקיד',start:33},
     {name:'הזהב',start:44},{name:'איזהו נשך',start:60},{name:'השוכר',start:75},
     {name:'השוכר את האומנין',start:77},{name:'השוכר את הפועלים',start:83},
     {name:'הבית והעלייה',start:116},{name:'המקבל',start:103}
   ]},
-  { id:'bb', he:'בבא בתרא', en:'Bava Basra', start:2, end:176, perakim:[
+  { id:'bb', he:'בבא בתרא', en:'Bava Basra', type:'bavli', start:2, end:176, perakim:[
     {name:'השותפין',start:2},{name:'לא יחפור',start:17},{name:'חזקת הבתים',start:29},
     {name:'המוכר את הבית',start:61},{name:'המוכר את הספינה',start:73},
     {name:'לא יבנה',start:98},{name:'שום היתומים',start:107},{name:'גט פשוט',start:160},
     {name:'מי שמת',start:108},{name:'יש נוחלין',start:108}
   ]},
-  { id:'sanhedrin', he:'סנהדרין', en:'Sanhedrin', start:2, end:113, perakim:[
+  { id:'sanhedrin', he:'סנהדרין', en:'Sanhedrin', type:'bavli', start:2, end:113, perakim:[
     {name:'דיני ממונות',start:2},{name:'כהן גדול',start:18},{name:'זה בורר',start:23},
     {name:'אחד דיני ממונות',start:32},{name:'שור שנגח',start:37},{name:'נגמר הדין',start:43},
     {name:'ד׳ מיתות',start:49},{name:'בן סורר ומורה',start:68},{name:'הנחנקין',start:84},
     {name:'אלו הן הנשרפין',start:75},{name:'חלק',start:90}
   ]},
-  { id:'makkos', he:'מכות', en:'Makkot', start:2, end:24, perakim:[
+  { id:'makkos', he:'מכות', en:'Makkot', type:'bavli', start:2, end:24, perakim:[
     {name:'כיצד העדים',start:2},{name:'אלו הן הגולין',start:7},{name:'אלו הן הלוקין',start:13}
   ]},
-  { id:'shevuos', he:'שבועות', en:'Shevuos', start:2, end:49, perakim:[
+  { id:'shevuos', he:'שבועות', en:'Shevuos', type:'bavli', start:2, end:49, perakim:[
     {name:'שבועות שתים',start:2},{name:'שבועות שתים ב',start:14},{name:'שבועת שוא',start:19},
     {name:'שבועת ביטוי',start:25},{name:'שבועת העדות',start:30},{name:'שבועת הפיקדון',start:36},
     {name:'שבועות הדיינין',start:38},{name:'כל הנשבעין',start:45}
   ]},
-  { id:'avoda_zara', he:'עבודה זרה', en:'Avoda Zara', start:2, end:76, perakim:[
+  { id:'avoda_zara', he:'עבודה זרה', en:'Avoda Zara', type:'bavli', start:2, end:76, perakim:[
     {name:'לפני אידיהן',start:2},{name:'אין מעמידין',start:22},{name:'כל הצלמים',start:40},
     {name:'ר׳ ישמעאל',start:45},{name:'השוכר את הפועל',start:55}
   ]},
-  { id:'horayos', he:'הוריות', en:'Horayos', start:2, end:14, perakim:[
+  { id:'horayos', he:'הוריות', en:'Horayos', type:'bavli', start:2, end:14, perakim:[
     {name:'הורו בית דין',start:2},{name:'ומה בין',start:6},{name:'כהן משיח',start:10}
   ]},
 ]},
 { seder:'Kodashim', masechtot:[
-  { id:'zevachim', he:'זבחים', en:'Zevachim', start:2, end:120, perakim:[
+  { id:'zevachim', he:'זבחים', en:'Zevachim', type:'bavli', start:2, end:120, perakim:[
     {name:'כל הזבחים',start:2},{name:'כל הזבחים ב',start:11},{name:'איזהו מקומן',start:47},
     {name:'כל שאין מטמא',start:27},{name:'קדשי קדשים',start:52},{name:'פרת חטאת',start:57},
     {name:'חטאת העוף',start:64},{name:'כל המנחות',start:77},{name:'ד׳ אחין',start:97},
     {name:'ב׳ כבשי עצרת',start:91},{name:'דם חטאת',start:93},{name:'הפסח',start:99},
     {name:'קדשים קלים',start:104},{name:'ר׳ שמעון',start:109}
   ]},
-  { id:'menachos', he:'מנחות', en:'Menachos', start:2, end:110, perakim:[
+  { id:'menachos', he:'מנחות', en:'Menachos', type:'bavli', start:2, end:110, perakim:[
     {name:'כל המנחות',start:2},{name:'כל המנחות ב',start:12},{name:'כל קרבנות',start:27},
     {name:'הרי עלי יין',start:89},{name:'ר׳ ישמעאל',start:51},{name:'שתי הלחם',start:95},
     {name:'ר׳ עקיבא',start:53},{name:'כל המנחות באות',start:74},{name:'התכלת',start:38},
     {name:'הקומץ רבה',start:20},{name:'המנחות והנסכים',start:91}
   ]},
-  { id:'chulin', he:'חולין', en:'Chulin', start:2, end:142, perakim:[
+  { id:'chulin', he:'חולין', en:'Chulin', type:'bavli', start:2, end:142, perakim:[
     {name:'הכל שוחטין',start:2},{name:'כיסוי הדם',start:83},{name:'אותו ואת בנו',start:78},
     {name:'ד׳ וה׳',start:68},{name:'שילוח הקן',start:138},{name:'הזרוע',start:130},
     {name:'הגיד',start:89},{name:'כל הבשר',start:103},{name:'טרפות',start:42},
     {name:'בהמה המקשה',start:69},{name:'כל הבשר ב',start:115},{name:'עוף וגבינה',start:103}
   ]},
-  { id:'bechoros', he:'בכורות', en:'Bechoros', start:2, end:61, perakim:[
+  { id:'bechoros', he:'בכורות', en:'Bechoros', type:'bavli', start:2, end:61, perakim:[
     {name:'כל פטרי',start:2},{name:'הלוקח עובר',start:15},{name:'על אלו מומין',start:28},
     {name:'יש בכור',start:36},{name:'מעשר בהמה',start:55},{name:'כל פסולי',start:40}
   ]},
-  { id:'erchin', he:'ערכין', en:'Erchin', start:2, end:34, perakim:[
+  { id:'erchin', he:'ערכין', en:'Erchin', type:'bavli', start:2, end:34, perakim:[
     {name:'הכל מעריכין',start:2},{name:'המקדיש שדהו',start:14},{name:'אין מחרימין',start:28},
     {name:'פרק ד',start:17},{name:'פרק ה',start:19}
   ]},
-  { id:'temurah', he:'תמורה', en:'Temurah', start:2, end:34, perakim:[
+  { id:'temurah', he:'תמורה', en:'Temurah', type:'bavli', start:2, end:34, perakim:[
     {name:'הכל ממירין',start:2},{name:'יש בקרבנות',start:10},{name:'אלו קדשים',start:16},
     {name:'ולד חטאת',start:18},{name:'כיצד מערימין',start:25},{name:'כל האסורין',start:28}
   ]},
-  { id:'kerisos', he:'כריתות', en:'Kerisos', start:2, end:28, perakim:[
+  { id:'kerisos', he:'כריתות', en:'Kerisos', type:'bavli', start:2, end:28, perakim:[
     {name:'שלשים ושש',start:2},{name:'ארבעה מחוסרי',start:8},{name:'ידיעות הטומאה',start:13},
     {name:'שאין מכירין',start:19},{name:'קרבן עולה ויורד',start:22},{name:'הנהנה',start:25}
   ]},
-  { id:'meilah', he:'מעילה', en:'Meilah', start:2, end:22, perakim:[
+  { id:'meilah', he:'מעילה', en:'Meilah', type:'bavli', start:2, end:22, perakim:[
     {name:'קדשי קדשים',start:2},{name:'קדשים קלים',start:8},{name:'חטאת העוף',start:11},
     {name:'ולד חטאת',start:13},{name:'השליח שעשה',start:15},{name:'כיצד מועלין',start:18}
   ]},
-  { id:'niddah', he:'נדה', en:'Niddah', start:2, end:73, perakim:[
+  { id:'niddah', he:'נדה', en:'Niddah', type:'bavli', start:2, end:73, perakim:[
     {name:'שמאי אומר',start:2},{name:'כל היד',start:13},{name:'תינוקת',start:35},
     {name:'בנות כותים',start:31},{name:'המפלת',start:21},{name:'האשה שהיא',start:37},
     {name:'דם הנדה',start:49},{name:'חרש',start:56},{name:'בנות שבע',start:65},{name:'תינוקת ב',start:69}
@@ -489,9 +465,113 @@ const SHAS = [
 ]},
 ];
 
-// Flat lookup by id
+// ═══════════════════════════════════════════════════════════════
+// DATA — MISHNAYOS (Fully Complete)
+// ═══════════════════════════════════════════════════════════════
+const MISHNAYOS = [
+{ seder:'Zeraim', masechtot:[
+  { id:'m_brachos', he:'ברכות', en:'Brachos', type:'mishna', mishnayos:[5,8,6,5,5,8,5,8,5] },
+  { id:'m_peah', he:'פאה', en:'Peah', type:'mishna', mishnayos:[6,8,8,11,8,11,8,9] },
+  { id:'m_demai', he:'דמאי', en:'Demai', type:'mishna', mishnayos:[4,5,6,7,11,11,8] },
+  { id:'m_kilayim', he:'כלאים', en:'Kilayim', type:'mishna', mishnayos:[9,11,7,9,8,9,8,6,10] },
+  { id:'m_sheviit', he:'שביעית', en:'Sheviit', type:'mishna', mishnayos:[8,10,10,10,9,6,7,11,9,9] },
+  { id:'m_terumot', he:'תרומות', en:'Terumot', type:'mishna', mishnayos:[10,6,9,13,9,6,7,12,7,12,10] },
+  { id:'m_maaserot', he:'מעשרות', en:'Maaserot', type:'mishna', mishnayos:[8,8,10,6,8] },
+  { id:'m_msheni', he:'מעשר שני', en:'Maaser Sheni', type:'mishna', mishnayos:[7,10,13,12,15] },
+  { id:'m_challah', he:'חלה', en:'Challah', type:'mishna', mishnayos:[9,8,10,11] },
+  { id:'m_orlah', he:'ערלה', en:'Orlah', type:'mishna', mishnayos:[9,17,9] },
+  { id:'m_bikkurim', he:'ביכורים', en:'Bikkurim', type:'mishna', mishnayos:[11,11,12,5] },
+]},
+{ seder:'Moed', masechtot:[
+  { id:'m_shabbat', he:'שבת', en:'Shabbat', type:'mishna', mishnayos:[11,7,6,2,4,10,4,7,7,6,6,6,7,4,3,8,8,3,6,5,3,6,5,5] },
+  { id:'m_eruvin', he:'עירובין', en:'Eruvin', type:'mishna', mishnayos:[10,6,9,11,9,10,11,11,4,15] },
+  { id:'m_pesachim', he:'פסחים', en:'Pesachim', type:'mishna', mishnayos:[7,8,8,9,10,6,13,8,11,9] },
+  { id:'m_shekalim', he:'שקלים', en:'Shekalim', type:'mishna', mishnayos:[7,5,4,9,6,6,7,8] },
+  { id:'m_yoma', he:'יומא', en:'Yoma', type:'mishna', mishnayos:[8,7,11,6,7,8,5,9] },
+  { id:'m_sukkah', he:'סוכה', en:'Sukkah', type:'mishna', mishnayos:[11,9,15,10,8] },
+  { id:'m_beitzah', he:'ביצה', en:'Beitzah', type:'mishna', mishnayos:[10,11,8,7,7] },
+  { id:'m_rosh_hashana', he:'ראש השנה', en:'Rosh Hashanah', type:'mishna', mishnayos:[9,10,9,9] },
+  { id:'m_taanit', he:'תענית', en:'Taanit', type:'mishna', mishnayos:[7,10,9,8] },
+  { id:'m_megillah', he:'מגילה', en:'Megillah', type:'mishna', mishnayos:[11,6,6,10] },
+  { id:'m_moed_katan', he:'מועד קטן', en:'Moed Katan', type:'mishna', mishnayos:[10,5,9] },
+  { id:'m_chagigah', he:'חגיגה', en:'Chagigah', type:'mishna', mishnayos:[8,7,8] },
+]},
+{ seder:'Nashim', masechtot:[
+  { id:'m_yevamot', he:'יבמות', en:'Yevamot', type:'mishna', mishnayos:[4,10,10,13,6,6,6,6,6,9,7,6,13,9,10,7] },
+  { id:'m_ketubot', he:'כתובות', en:'Ketubot', type:'mishna', mishnayos:[10,10,9,12,9,7,10,8,9,6,6,4,11] },
+  { id:'m_nedarim', he:'נדרים', en:'Nedarim', type:'mishna', mishnayos:[4,5,11,8,6,10,9,7,10,8,12] },
+  { id:'m_nazir', he:'נזיר', en:'Nazir', type:'mishna', mishnayos:[7,10,7,7,7,11,4,2,5] },
+  { id:'m_sotah', he:'סוטה', en:'Sotah', type:'mishna', mishnayos:[9,6,8,5,5,4,8,9,15] },
+  { id:'m_gittin', he:'גיטין', en:'Gittin', type:'mishna', mishnayos:[6,7,8,9,9,7,9,10,10] },
+  { id:'m_kiddushin', he:'קידושין', en:'Kiddushin', type:'mishna', mishnayos:[10,10,13,14] },
+]},
+{ seder:'Nezikin', masechtot:[
+  { id:'m_bava_kamma', he:'בבא קמא', en:'Bava Kamma', type:'mishna', mishnayos:[10,11,11,9,7,6,7,7,12,10] },
+  { id:'m_bava_metzia', he:'בבא מציעא', en:'Bava Metzia', type:'mishna', mishnayos:[8,11,12,12,11,8,11,9,13,6] },
+  { id:'m_bava_batra', he:'בבא בתרא', en:'Bava Batra', type:'mishna', mishnayos:[6,14,8,9,11,8,4,8,10,8] },
+  { id:'m_sanhedrin', he:'סנהדרין', en:'Sanhedrin', type:'mishna', mishnayos:[6,5,8,5,5,6,11,7,6,6,11] },
+  { id:'m_makkot', he:'מכות', en:'Makkot', type:'mishna', mishnayos:[10,8,16] },
+  { id:'m_shevuot', he:'שבועות', en:'Shevuot', type:'mishna', mishnayos:[7,5,11,13,5,7,8,6] },
+  { id:'m_eduyot', he:'עדויות', en:'Eduyot', type:'mishna', mishnayos:[14,10,12,12,7,3,9,7] },
+  { id:'m_avodah_zarah', he:'עבודה זרה', en:'Avodah Zarah', type:'mishna', mishnayos:[9,7,10,12,12] },
+  { id:'m_avot', he:'אבות', en:'Avot', type:'mishna', mishnayos:[18,16,18,22,23,11] },
+  { id:'m_horayot', he:'הוריות', en:'Horayot', type:'mishna', mishnayos:[5,7,8] },
+]},
+{ seder:'Kodashim', masechtot:[
+  { id:'m_zevachim', he:'זבחים', en:'Zevachim', type:'mishna', mishnayos:[4,5,6,6,8,7,6,12,7,8,8,6,8,10] },
+  { id:'m_menachot', he:'מנחות', en:'Menachot', type:'mishna', mishnayos:[4,5,7,5,9,7,3,7,9,9,9,5,11] },
+  { id:'m_chullin', he:'חולין', en:'Chullin', type:'mishna', mishnayos:[7,10,7,7,5,7,6,6,8,4,2,5] },
+  { id:'m_bekhorot', he:'בכורות', en:'Bekhorot', type:'mishna', mishnayos:[7,9,4,10,6,12,7,10,8] },
+  { id:'m_arakhin', he:'ערכין', en:'Arakhin', type:'mishna', mishnayos:[4,6,5,4,6,6,5,7,8] },
+  { id:'m_temurah', he:'תמורה', en:'Temurah', type:'mishna', mishnayos:[6,3,5,4,6,5,6] },
+  { id:'m_keritot', he:'כריתות', en:'Keritot', type:'mishna', mishnayos:[7,6,10,3,8,9] },
+  { id:'m_meilah', he:'מעילה', en:'Meilah', type:'mishna', mishnayos:[4,9,8,6,5,6] },
+  { id:'m_tamid', he:'תמיד', en:'Tamid', type:'mishna', mishnayos:[4,5,9,3,6,3,3] },
+  { id:'m_middot', he:'מידות', en:'Middot', type:'mishna', mishnayos:[9,6,8,7,4] },
+  { id:'m_kinnim', he:'קינים', en:'Kinnim', type:'mishna', mishnayos:[4,5,6] },
+]},
+{ seder:'Taharot', masechtot:[
+  { id:'m_kelim', he:'כלים', en:'Kelim', type:'mishna', mishnayos:[9,8,8,4,11,4,6,11,8,8,9,8,8,8,6,8,17,9,10,7,3,10,5,17,9,9,12,10,8,4] },
+  { id:'m_oholot', he:'אהלות', en:'Oholot', type:'mishna', mishnayos:[8,7,7,3,6,7,6,6,16,7,9,8,6,7,10,5,5,10] },
+  { id:'m_negaim', he:'נגעים', en:'Negaim', type:'mishna', mishnayos:[6,5,8,11,5,8,5,10,3,10,11,7,12,13] },
+  { id:'m_parah', he:'פרה', en:'Parah', type:'mishna', mishnayos:[4,5,11,4,9,5,12,11,9,6,9,11] },
+  { id:'m_taharot', he:'טהרות', en:'Taharot', type:'mishna', mishnayos:[9,8,8,13,9,10,9,9,9,8] },
+  { id:'m_mikvaot', he:'מקואות', en:'Mikvaot', type:'mishna', mishnayos:[8,10,4,5,6,11,7,5,7,8] },
+  { id:'m_niddah', he:'נדה', en:'Niddah', type:'mishna', mishnayos:[7,7,7,7,9,14,5,4,11,8] },
+  { id:'m_makhshirin', he:'מכשירין', en:'Makhshirin', type:'mishna', mishnayos:[6,11,8,10,11,8] },
+  { id:'m_zavim', he:'זבים', en:'Zavim', type:'mishna', mishnayos:[6,4,3,7,12] },
+  { id:'m_tevul_yom', he:'טבול יום', en:'Tevul Yom', type:'mishna', mishnayos:[5,8,6,7] },
+  { id:'m_yadayim', he:'ידים', en:'Yadayim', type:'mishna', mishnayos:[5,4,2,8] },
+  { id:'m_uktzin', he:'עוקצים', en:'Uktzin', type:'mishna', mishnayos:[6,10,12] },
+]}
+];
+
+// Flat lookup by id handles BOTH modes automatically for Firebase
 const M_BY_ID = {};
 SHAS.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; }));
+MISHNAYOS.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; }));
+
+// ── STATE ─────────────────────────────────────────────────────
+let activeTab = 'overview';
+let currentMode = 'bavli';
+
+document.getElementById('mode-bavli').onclick = () => {
+  currentMode = 'bavli'; activeTab = 'overview';
+  document.getElementById('mode-bavli').classList.add('active');
+  document.getElementById('mode-mishna').classList.remove('active');
+  renderAll();
+};
+
+document.getElementById('mode-mishna').onclick = () => {
+  currentMode = 'mishna'; activeTab = 'overview';
+  document.getElementById('mode-mishna').classList.add('active');
+  document.getElementById('mode-bavli').classList.remove('active');
+  renderAll();
+};
+
+function getCurrentData() {
+  return currentMode === 'bavli' ? SHAS : MISHNAYOS;
+}
 
 // ── STORAGE ────────────────────────────────────────────────────
 function getLearnedSet(mId) {
@@ -502,59 +582,76 @@ function saveLearnedSet(mId, set) {
   localStorage.setItem('g_'+mId, JSON.stringify([...set]));
   scheduleCloudPush();
 }
-function toggleAmud(mId, key) {
+function toggleUnit(mId, key) {
   const s = getLearnedSet(mId);
   s.has(key) ? s.delete(key) : s.add(key);
   saveLearnedSet(mId, s); return s;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
-function getAmudim(m) {
+function getUnits(m) {
   const list = [];
-  for (let d = m.start; d <= m.end; d++) {
-    list.push({daf:d,amud:'a',key:`${d}a`});
-    list.push({daf:d,amud:'b',key:`${d}b`});
+  if (m.type === 'bavli') {
+    for (let d = m.start; d <= m.end; d++) {
+      list.push({key:`${d}a`}); list.push({key:`${d}b`});
+    }
+  } else {
+    m.mishnayos.forEach((count, pIdx) => {
+      for(let i=1; i<=count; i++) list.push({key:`p${pIdx+1}_m${i}`});
+    });
   }
   return list;
 }
-function countDapim(m, learned) {
+
+function totalUnits(m) {
+  if (m.type === 'bavli') return (m.end - m.start + 1) * 2;
+  return m.mishnayos.reduce((a,b)=>a+b, 0);
+}
+
+function countPrimary(m, learned) {
   let n = 0;
-  for (let d = m.start; d <= m.end; d++) if (learned.has(`${d}a`) && learned.has(`${d}b`)) n++;
+  if (m.type === 'bavli') {
+    for (let d = m.start; d <= m.end; d++) if (learned.has(`${d}a`) && learned.has(`${d}b`)) n++;
+  } else {
+    m.mishnayos.forEach((count, pIdx) => {
+      let full = true;
+      for(let i=1; i<=count; i++) if (!learned.has(`p${pIdx+1}_m${i}`)) full = false;
+      if(full) n++;
+    });
+  }
   return n;
 }
-function totalDapim(m) { return m.end - m.start + 1; }
-function totalAmudim(m) { return totalDapim(m) * 2; }
+
+function totalPrimary(m) {
+  return m.type === 'bavli' ? (m.end - m.start + 1) : m.mishnayos.length;
+}
+
 function pct(done, total) { return total ? Math.round(done/total*100) : 0; }
 
 function getStatus(m) {
   const learned = getLearnedSet(m.id);
   if (learned.size === 0) return 'unstarted';
-  if (learned.size === totalAmudim(m)) return 'completed';
+  if (learned.size === totalUnits(m)) return 'completed';
   return 'inprogress';
 }
-
-// ── STATE ─────────────────────────────────────────────────────
-let activeTab = 'overview';
 
 // ── TABS ──────────────────────────────────────────────────────
 function renderTabs() {
   const el = document.getElementById('tabs');
   el.innerHTML = '';
-  // Overview tab
   const ov = document.createElement('button');
   ov.className = 'tab' + (activeTab==='overview'?' active':'');
   ov.textContent = 'Overview';
   ov.onclick = () => { activeTab='overview'; renderAll(); };
   el.appendChild(ov);
 
-  // Tabs for masechtot that are in-progress or completed
-  SHAS.forEach(s => s.masechtot.forEach(m => {
+  getCurrentData().forEach(s => s.masechtot.forEach(m => {
     const st = getStatus(m);
     if (st === 'unstarted') return;
     const learned = getLearnedSet(m.id);
     const btn = document.createElement('button');
     btn.className = 'tab' + (activeTab===m.id?' active':'');
-    btn.innerHTML = `${m.en} <span class="tc">${learned.size}/${totalAmudim(m)}</span>`;
+    btn.innerHTML = `${m.en} <span class="tc">${learned.size}/${totalUnits(m)}</span>`;
     btn.onclick = () => { activeTab=m.id; renderAll(); };
     el.appendChild(btn);
   }));
@@ -566,34 +663,39 @@ function renderOverview() {
   wrap.className = 'view' + (activeTab==='overview'?' active':'');
   wrap.id = 'view-overview';
 
-  // ── Aggregate Shas stats ──
-  let totalShasDapim = 0, learnedShasDapim = 0, totalShasAmudim = 0, learnedShasAmudim = 0;
+  let totalPri = 0, learnedPri = 0, totalUni = 0, learnedUni = 0;
   let completedCount = 0;
-  SHAS.forEach(s => s.masechtot.forEach(m => {
+  
+  const data = getCurrentData();
+  const isBavli = currentMode === 'bavli';
+  const labelPri = isBavli ? 'Dapim' : 'Perakim';
+  const labelUni = isBavli ? 'Amudim' : 'Mishnayos';
+
+  data.forEach(s => s.masechtot.forEach(m => {
     const learned = getLearnedSet(m.id);
-    totalShasDapim += totalDapim(m);
-    totalShasAmudim += totalAmudim(m);
-    learnedShasDapim += countDapim(m, learned);
-    learnedShasAmudim += learned.size;
+    totalPri += totalPrimary(m);
+    totalUni += totalUnits(m);
+    learnedPri += countPrimary(m, learned);
+    learnedUni += learned.size;
     if (getStatus(m) === 'completed') completedCount++;
   }));
-  const shasPct = pct(learnedShasAmudim, totalShasAmudim);
+  const shasPct = pct(learnedUni, totalUni);
 
   const banner = document.createElement('div');
   banner.className = 'shas-banner';
   banner.innerHTML = `
     <div class="shas-banner-stats">
       <div class="shas-stat">
-        <span class="shas-stat-val">${learnedShasDapim.toLocaleString()}</span>
-        <span class="shas-stat-lbl">Dapim learned</span>
+        <span class="shas-stat-val">${learnedPri.toLocaleString()}</span>
+        <span class="shas-stat-lbl">${labelPri} learned</span>
       </div>
       <div class="shas-stat">
-        <span class="shas-stat-val dim">${(totalShasDapim - learnedShasDapim).toLocaleString()}</span>
-        <span class="shas-stat-lbl">Dapim remaining</span>
+        <span class="shas-stat-val dim">${(totalPri - learnedPri).toLocaleString()}</span>
+        <span class="shas-stat-lbl">${labelPri} remaining</span>
       </div>
       <div class="shas-stat">
-        <span class="shas-stat-val">${learnedShasAmudim.toLocaleString()}</span>
-        <span class="shas-stat-lbl">Amudim learned</span>
+        <span class="shas-stat-val">${learnedUni.toLocaleString()}</span>
+        <span class="shas-stat-lbl">${labelUni} learned</span>
       </div>
       <div class="shas-stat">
         <span class="shas-stat-val dim">${completedCount}</span>
@@ -601,18 +703,18 @@ function renderOverview() {
       </div>
       <div class="shas-stat">
         <span class="shas-stat-val gold">${shasPct}%</span>
-        <span class="shas-stat-lbl">of Shas complete</span>
+        <span class="shas-stat-lbl">Complete</span>
       </div>
     </div>
     <div class="shas-banner-bar">
       <div class="shas-banner-fill" style="width:${shasPct}%"></div>
     </div>
-    <div class="shas-banner-sub">${totalShasDapim.toLocaleString()} total dapim · ${SHAS.reduce((a,s)=>a+s.masechtot.length,0)} masechtot</div>
+    <div class="shas-banner-sub">${totalPri.toLocaleString()} total ${labelPri.toLowerCase()} · ${data.reduce((a,s)=>a+s.masechtot.length,0)} masechtot</div>
   `;
   wrap.appendChild(banner);
 
   const inProgress = [], completed = [];
-  SHAS.forEach(s => s.masechtot.forEach(m => {
+  data.forEach(s => s.masechtot.forEach(m => {
     const st = getStatus(m);
     if (st === 'inprogress') inProgress.push(m);
     if (st === 'completed') completed.push(m);
@@ -623,7 +725,7 @@ function renderOverview() {
     lbl.className = 'ov-section-title'; lbl.textContent = 'In Progress';
     wrap.appendChild(lbl);
     const grid = document.createElement('div'); grid.className = 'ov-grid';
-    inProgress.forEach(m => grid.appendChild(makeOvCard(m)));
+    inProgress.forEach(m => grid.appendChild(makeOvCard(m, labelPri, labelUni)));
     wrap.appendChild(grid);
   }
 
@@ -632,15 +734,15 @@ function renderOverview() {
     lbl.className = 'ov-section-title'; lbl.textContent = 'Completed';
     wrap.appendChild(lbl);
     const grid = document.createElement('div'); grid.className = 'ov-grid';
-    completed.forEach(m => grid.appendChild(makeOvCard(m)));
+    completed.forEach(m => grid.appendChild(makeOvCard(m, labelPri, labelUni)));
     wrap.appendChild(grid);
   }
 
   const allLbl = document.createElement('div');
-  allLbl.className = 'ov-section-title'; allLbl.textContent = 'All of Shas';
+  allLbl.className = 'ov-section-title'; allLbl.textContent = 'All Categories';
   wrap.appendChild(allLbl);
 
-  SHAS.forEach(s => {
+  data.forEach(s => {
     const group = document.createElement('div'); group.className = 'seder-group';
     const btn = document.createElement('button'); btn.className = 'seder-toggle';
     const arrow = document.createElement('span'); arrow.className = 'seder-arrow';
@@ -655,12 +757,12 @@ function renderOverview() {
     s.masechtot.forEach(m => {
       const learned = getLearnedSet(m.id);
       const amDone = learned.size;
-      const amTotal = totalAmudim(m);
+      const amTotal = totalUnits(m);
       const p = pct(amDone, amTotal);
       const st = getStatus(m);
       const card = document.createElement('div');
       card.className = 'mini-card' + (st==='inprogress'?' has-progress':st==='completed'?' completed':'');
-      card.innerHTML = `<span class="mini-card-name">${m.he}</span><div class="mini-card-info"><div>${m.en}</div><div class="pct">${p > 0 ? p+'%' : totalDapim(m)+' dapim'}</div></div>`;
+      card.innerHTML = `<span class="mini-card-name">${m.he}</span><div class="mini-card-info"><div>${m.en}</div><div class="pct">${p > 0 ? p+'%' : totalPrimary(m)+' ' + labelPri.toLowerCase()}</div></div>`;
       card.onclick = () => { activeTab = m.id; renderAll(); };
       miniGrid.appendChild(card);
     });
@@ -677,19 +779,19 @@ function renderOverview() {
   return wrap;
 }
 
-function makeOvCard(m) {
+function makeOvCard(m, labelPri, labelUni) {
   const learned = getLearnedSet(m.id);
-  const amDone = learned.size, amTotal = totalAmudim(m);
-  const dDone = countDapim(m, learned), dTotal = totalDapim(m);
+  const amDone = learned.size, amTotal = totalUnits(m);
+  const dDone = countPrimary(m, learned), dTotal = totalPrimary(m);
   const p = pct(amDone, amTotal);
   const st = getStatus(m);
   const card = document.createElement('div');
   card.className = 'ov-card' + (st==='completed'?' completed':'');
   card.innerHTML = `
     <h3>${m.he}<small>${m.en}</small></h3>
-    <div class="ov-row"><span>Dapim learned</span><span>${dDone} / ${dTotal}</span></div>
-    <div class="ov-row"><span>Dapim remaining</span><span>${dTotal - dDone}</span></div>
-    <div class="ov-row"><span>Amudim learned</span><span>${amDone} / ${amTotal}</span></div>
+    <div class="ov-row"><span>${labelPri} learned</span><span>${dDone} / ${dTotal}</span></div>
+    <div class="ov-row"><span>${labelPri} remaining</span><span>${dTotal - dDone}</span></div>
+    <div class="ov-row"><span>${labelUni} learned</span><span>${amDone} / ${amTotal}</span></div>
     <div class="ov-row"><span>Complete</span><span>${p}%</span></div>
     <div class="ov-bar"><div class="ov-fill" style="width:${p}%"></div></div>
   `;
@@ -704,15 +806,19 @@ function renderMasechet(m) {
   wrap.id = 'view-'+m.id;
 
   let learned = getLearnedSet(m.id);
-  const amTotal = totalAmudim(m), dTotal = totalDapim(m);
+  const amTotal = totalUnits(m), dTotal = totalPrimary(m);
+  
+  const isBavli = m.type === 'bavli';
+  const labelPri = isBavli ? 'Dapim' : 'Perakim';
+  const labelUni = isBavli ? 'Amudim' : 'Mishnayos';
 
   // stats bar
   const stats = document.createElement('div'); stats.className = 'stats-bar';
   stats.innerHTML = `
-    <div class="stat"><span class="stat-label">Dapim learned</span><span class="stat-value green sv-dd">${countDapim(m,learned)}</span></div>
-    <div class="stat"><span class="stat-label">Dapim remaining</span><span class="stat-value dim sv-dr">${dTotal - countDapim(m,learned)}</span></div>
-    <div class="stat"><span class="stat-label">Amudim learned</span><span class="stat-value green sv-ad">${learned.size}</span></div>
-    <div class="stat"><span class="stat-label">Amudim remaining</span><span class="stat-value dim sv-ar">${amTotal - learned.size}</span></div>
+    <div class="stat"><span class="stat-label">${labelPri} learned</span><span class="stat-value green sv-dd">${countPrimary(m,learned)}</span></div>
+    <div class="stat"><span class="stat-label">${labelPri} remaining</span><span class="stat-value dim sv-dr">${dTotal - countPrimary(m,learned)}</span></div>
+    <div class="stat"><span class="stat-label">${labelUni} learned</span><span class="stat-value green sv-ad">${learned.size}</span></div>
+    <div class="stat"><span class="stat-label">${labelUni} remaining</span><span class="stat-value dim sv-ar">${amTotal - learned.size}</span></div>
     <div class="stat"><span class="stat-label">Complete</span><span class="stat-value sv-pct">${pct(learned.size,amTotal)}%</span></div>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct(learned.size,amTotal)}%"></div></div>
     <div class="btn-row">
@@ -723,8 +829,8 @@ function renderMasechet(m) {
   wrap.appendChild(stats);
 
   function rebuildStats() {
-    wrap.querySelector('.sv-dd').textContent = countDapim(m,learned);
-    wrap.querySelector('.sv-dr').textContent = dTotal - countDapim(m,learned);
+    wrap.querySelector('.sv-dd').textContent = countPrimary(m,learned);
+    wrap.querySelector('.sv-dr').textContent = dTotal - countPrimary(m,learned);
     wrap.querySelector('.sv-ad').textContent = learned.size;
     wrap.querySelector('.sv-ar').textContent = amTotal - learned.size;
     const p = pct(learned.size, amTotal);
@@ -732,74 +838,95 @@ function renderMasechet(m) {
     wrap.querySelector('.progress-fill').style.width = p+'%';
   }
 
-  // Build perakim blocks
-  const perakim = m.perakim || [];
-  // sort ascending
-  const sorted = [...perakim].sort((a,b)=>a.start-b.start);
-  // build segments: each perek goes from its start to (next perek start - 1), last goes to m.end
-  const segments = sorted.map((pk, i) => {
-    const endDaf = i < sorted.length-1 ? sorted[i+1].start - 1 : m.end;
-    return { name: pk.name, startDaf: pk.start, endDaf };
-  });
-  // if no perakim, treat whole masechet as one block
-  if (segments.length === 0) segments.push({ name: m.en, startDaf: m.start, endDaf: m.end });
+  // Build perakim blocks dynamically for both modes
+  if (isBavli) {
+    const perakim = m.perakim || [];
+    const sorted = [...perakim].sort((a,b)=>a.start-b.start);
+    const segments = sorted.map((pk, i) => {
+      const endDaf = i < sorted.length-1 ? sorted[i+1].start - 1 : m.end;
+      return { name: pk.name, startDaf: pk.start, endDaf };
+    });
+    if (segments.length === 0) segments.push({ name: m.en, startDaf: m.start, endDaf: m.end });
 
-  segments.forEach((seg, si) => {
-    const block = document.createElement('div'); block.className = 'perek-block';
+    segments.forEach((seg, si) => {
+      const block = document.createElement('div'); block.className = 'perek-block';
+      const hdr = document.createElement('div'); hdr.className = 'perek-header';
+      hdr.innerHTML = `<span class="perek-name">פרק ${si+1} — ${seg.name}</span><span class="perek-dafim">${seg.startDaf}a – ${seg.endDaf}b</span><span class="perek-pct"></span><div class="perek-mini-bar"><div class="perek-mini-fill"></div></div>`;
+      
+      const pPct = hdr.querySelector('.perek-pct');
+      const miniFill = hdr.querySelector('.perek-mini-fill');
 
-    const hdr = document.createElement('div'); hdr.className = 'perek-header';
-    const pName = document.createElement('span'); pName.className = 'perek-name';
-    pName.textContent = `פרק ${si+1} — ${seg.name}`;
-    const pDafim = document.createElement('span'); pDafim.className = 'perek-dafim';
-    pDafim.textContent = `${seg.startDaf}a – ${seg.endDaf}b`;
-    const pPct = document.createElement('span'); pPct.className = 'perek-pct';
-    const miniBar = document.createElement('div'); miniBar.className = 'perek-mini-bar';
-    const miniFill = document.createElement('div'); miniFill.className = 'perek-mini-fill';
-    miniBar.appendChild(miniFill);
-
-    function calcPerekPct() {
-      let done = 0, total = 0;
-      for (let d = seg.startDaf; d <= seg.endDaf; d++) {
-        if (learned.has(`${d}a`)) done++;
-        if (learned.has(`${d}b`)) done++;
-        total += 2;
+      function refreshPerek() {
+        let done = 0, total = 0;
+        for (let d = seg.startDaf; d <= seg.endDaf; d++) {
+          if (learned.has(`${d}a`)) done++;
+          if (learned.has(`${d}b`)) done++;
+          total += 2;
+        }
+        const p = pct(done,total);
+        pPct.textContent = p+'%'; miniFill.style.width = p+'%';
       }
-      return { done, total, p: pct(done,total) };
-    }
-    function refreshPerek() {
-      const {done,total,p} = calcPerekPct();
-      pPct.textContent = p+'%';
-      miniFill.style.width = p+'%';
-    }
-    refreshPerek();
+      refreshPerek();
+      block.appendChild(hdr);
 
-    hdr.appendChild(pName); hdr.appendChild(pDafim); hdr.appendChild(pPct); hdr.appendChild(miniBar);
-    block.appendChild(hdr);
+      const grid = document.createElement('div'); grid.className = 'daf-grid';
+      for (let d = seg.startDaf; d <= seg.endDaf; d++) {
+        ['a','b'].forEach(amud => {
+          const key = `${d}${amud}`;
+          const cell = document.createElement('div');
+          cell.className = 'amud-cell' + (learned.has(key)?' learned':'');
+          cell.innerHTML = `<span class="ck">✓</span><span class="daf-num">${d}</span><span class="amud-lbl">${amud}</span>`;
+          cell.onclick = () => {
+            learned = toggleUnit(m.id, key);
+            cell.classList.toggle('learned', learned.has(key));
+            rebuildStats(); refreshPerek(); renderTabs();
+          };
+          grid.appendChild(cell);
+        });
+      }
+      block.appendChild(grid);
+      wrap.appendChild(block);
+    });
+  } else {
+    // Mishna Grid
+    m.mishnayos.forEach((mCount, pIdx) => {
+      const block = document.createElement('div'); block.className = 'perek-block';
+      const hdr = document.createElement('div'); hdr.className = 'perek-header';
+      hdr.innerHTML = `<span class="perek-name">פרק ${pIdx+1}</span><span class="perek-dafim">${mCount} Mishnayos</span><span class="perek-pct"></span><div class="perek-mini-bar"><div class="perek-mini-fill"></div></div>`;
+      
+      const pPct = hdr.querySelector('.perek-pct');
+      const miniFill = hdr.querySelector('.perek-mini-fill');
 
-    const grid = document.createElement('div'); grid.className = 'daf-grid';
-    for (let d = seg.startDaf; d <= seg.endDaf; d++) {
-      ['a','b'].forEach(amud => {
-        const key = `${d}${amud}`;
+      function refreshPerek() {
+        let done = 0;
+        for (let i = 1; i <= mCount; i++) if (learned.has(`p${pIdx+1}_m${i}`)) done++;
+        const p = pct(done,mCount);
+        pPct.textContent = p+'%'; miniFill.style.width = p+'%';
+      }
+      refreshPerek();
+      block.appendChild(hdr);
+
+      const grid = document.createElement('div'); grid.className = 'daf-grid';
+      for (let i = 1; i <= mCount; i++) {
+        const key = `p${pIdx+1}_m${i}`;
         const cell = document.createElement('div');
         cell.className = 'amud-cell' + (learned.has(key)?' learned':'');
-        cell.innerHTML = `<span class="ck">✓</span><span class="daf-num">${d}</span><span class="amud-lbl">${amud}</span>`;
+        cell.innerHTML = `<span class="ck">✓</span><span class="daf-num">${i}</span><span class="amud-lbl">משנה</span>`;
         cell.onclick = () => {
-          learned = toggleAmud(m.id, key);
+          learned = toggleUnit(m.id, key);
           cell.classList.toggle('learned', learned.has(key));
           rebuildStats(); refreshPerek(); renderTabs();
         };
         grid.appendChild(cell);
-      });
-    }
-    block.appendChild(grid);
-    wrap.appendChild(block);
-  });
+      }
+      block.appendChild(grid);
+      wrap.appendChild(block);
+    });
+  }
 
-  // button events
   setTimeout(() => {
     wrap.querySelector('.btn-markall').onclick = () => {
-      const amudim = getAmudim(m);
-      amudim.forEach(({key}) => learned.add(key));
+      getUnits(m).forEach(({key}) => learned.add(key));
       saveLearnedSet(m.id, learned);
       wrap.querySelectorAll('.amud-cell').forEach(c => c.classList.add('learned'));
       rebuildStats();
@@ -826,18 +953,16 @@ function renderAll() {
   const views = document.getElementById('views');
   views.innerHTML = '';
   views.appendChild(renderOverview());
-  SHAS.forEach(s => s.masechtot.forEach(m => views.appendChild(renderMasechet(m))));
+  getCurrentData().forEach(s => s.masechtot.forEach(m => views.appendChild(renderMasechet(m))));
   renderTabs();
 }
 
 renderAll();
 
 // ═══════════════════════════════════════════════════════════════
-// CLOUD SYNC (Firebase Auth + Firestore) — see setup comment in <head>
+// CLOUD SYNC (Firebase Auth + Firestore)
 // ═══════════════════════════════════════════════════════════════
 
-// Replace these placeholder values with the config Firebase gives you
-// when you register a Web app in your Firebase project settings.
 const firebaseConfig = {
   apiKey: "AIzaSyCdBA_DVEupBTrwRVYKhvVw8KU8SKMpxOE",
   authDomain: "gemara-tracker.firebaseapp.com",
@@ -849,23 +974,17 @@ const firebaseConfig = {
 };
 
 let auth = null, db = null, cloudReady = false;
-let currentUser = null;
-let unsubSnapshot = null;
-let pushTimer = null;
+let currentUser = null, unsubSnapshot = null, pushTimer = null;
 
 try {
   if (firebaseConfig.apiKey && typeof firebase !== 'undefined' && typeof firebase.auth === 'function' && typeof firebase.firestore === 'function') {
     firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    cloudReady = true;
+    auth = firebase.auth(); db = firebase.firestore(); cloudReady = true;
   }
 } catch (e) {
-  console.warn('Cloud sync not available:', e);
-  cloudReady = false;
+  console.warn('Cloud sync not available:', e); cloudReady = false;
 }
 
-// ── progress <-> plain-object helpers (used for cloud read/write) ──
 function getAllLocalProgress() {
   const out = {};
   Object.keys(M_BY_ID).forEach(id => {
@@ -892,28 +1011,19 @@ function unionProgress(a, b) {
   return out;
 }
 
-// ── pushing local changes to the cloud (debounced) ──
 function scheduleCloudPush() {
   if (!cloudReady || !currentUser) return;
   setSyncStatus('syncing');
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(pushToCloud, 900);
+  clearTimeout(pushTimer); pushTimer = setTimeout(pushToCloud, 900);
 }
 function pushToCloud() {
   if (!cloudReady || !currentUser) return;
   const progress = getAllLocalProgress();
   db.collection('users').doc(currentUser.uid).set({
-    progress,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    setSyncStatus('synced');
-  }).catch(err => {
-    console.error('Cloud push failed:', err);
-    setSyncStatus('error');
-  });
+    progress, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => setSyncStatus('synced')).catch(() => setSyncStatus('error'));
 }
 
-// ── listening for changes made on other devices ──
 function attachListener() {
   if (unsubSnapshot) unsubSnapshot();
   unsubSnapshot = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
@@ -921,20 +1031,13 @@ function attachListener() {
     const cloudProgress = doc.data().progress || {};
     const localProgress = getAllLocalProgress();
     if (JSON.stringify(cloudProgress) === JSON.stringify(localProgress)) {
-      setSyncStatus('synced');
-      return;
+      setSyncStatus('synced'); return;
     }
-    // A change arrived from another device — adopt it here too.
     applyProgressObject(cloudProgress, {clearMissing:true});
-    setSyncStatus('synced');
-    renderAll();
-  }, err => {
-    console.error('Sync listener error:', err);
-    setSyncStatus('error');
-  });
+    setSyncStatus('synced'); renderAll();
+  }, () => setSyncStatus('error'));
 }
 
-// ── reconciling this device's local data with the cloud, on sign-in ──
 function reconcileOnSignIn() {
   setSyncStatus('syncing');
   const localProgress = getAllLocalProgress();
@@ -943,61 +1046,36 @@ function reconcileOnSignIn() {
     const cloudProgress = (doc.exists && doc.data().progress) ? doc.data().progress : {};
     const hasCloud = Object.keys(cloudProgress).length > 0;
 
-    if (!hasCloud) {
-      pushToCloud();
-      attachListener();
-      return;
-    }
+    if (!hasCloud) { pushToCloud(); attachListener(); return; }
     if (!hasLocal) {
       applyProgressObject(cloudProgress, {clearMissing:true});
-      renderAll();
-      attachListener();
-      setSyncStatus('synced');
-      return;
+      renderAll(); attachListener(); setSyncStatus('synced'); return;
     }
     if (JSON.stringify(cloudProgress) === JSON.stringify(localProgress)) {
-      attachListener();
-      setSyncStatus('synced');
-      return;
+      attachListener(); setSyncStatus('synced'); return;
     }
     openConflictModal(localProgress, cloudProgress);
-  }).catch(err => {
-    console.error('Reconcile failed:', err);
-    setSyncStatus('error');
-  });
+  }).catch(() => setSyncStatus('error'));
 }
 
 function openConflictModal(localProgress, cloudProgress) {
   document.getElementById('conflictOverlay').classList.remove('hidden');
   document.getElementById('conflictMerge').onclick = () => {
-    const merged = unionProgress(localProgress, cloudProgress);
-    applyProgressObject(merged, {clearMissing:true});
-    renderAll();
-    closeConflictModal();
-    pushToCloud();
-    attachListener();
+    applyProgressObject(unionProgress(localProgress, cloudProgress), {clearMissing:true});
+    renderAll(); closeConflictModal(); pushToCloud(); attachListener();
   };
   document.getElementById('conflictCloud').onclick = () => {
     applyProgressObject(cloudProgress, {clearMissing:true});
-    renderAll();
-    closeConflictModal();
-    attachListener();
-    setSyncStatus('synced');
+    renderAll(); closeConflictModal(); attachListener(); setSyncStatus('synced');
   };
   document.getElementById('conflictLocal').onclick = () => {
-    closeConflictModal();
-    pushToCloud();
-    attachListener();
+    closeConflictModal(); pushToCloud(); attachListener();
   };
 }
-function closeConflictModal() {
-  document.getElementById('conflictOverlay').classList.add('hidden');
-}
+function closeConflictModal() { document.getElementById('conflictOverlay').classList.add('hidden'); }
 
-// ── auth UI ──
 function setSyncStatus(status) {
-  const dot = document.getElementById('syncDot');
-  const label = document.getElementById('syncLabel');
+  const dot = document.getElementById('syncDot'); const label = document.getElementById('syncLabel');
   if (!dot || !label) return;
   dot.className = 'sync-dot ' + status;
   const map = { synced:'Synced', syncing:'Syncing…', error:'Sync error', offline:'Local only' };
@@ -1006,19 +1084,10 @@ function setSyncStatus(status) {
 
 function updateAccountBar() {
   const bar = document.getElementById('accountBar');
-  if (!cloudReady) {
-    bar.innerHTML = `<span class="confignote">Cloud sync not configured</span>`;
-    return;
-  }
+  if (!cloudReady) { bar.innerHTML = `<span class="confignote">Cloud sync not configured</span>`; return; }
   if (currentUser) {
-    bar.innerHTML = `
-      <span class="sync-dot" id="syncDot"></span>
-      <span id="syncLabel"></span>
-      <span class="email">${currentUser.email}</span>
-      <button class="btn" id="signOutBtn">Sign Out</button>
-    `;
-    document.getElementById('signOutBtn').onclick = handleSignOut;
-    setSyncStatus('synced');
+    bar.innerHTML = `<span class="sync-dot" id="syncDot"></span><span id="syncLabel"></span><span class="email">${currentUser.email}</span><button class="btn" id="signOutBtn">Sign Out</button>`;
+    document.getElementById('signOutBtn').onclick = handleSignOut; setSyncStatus('synced');
   } else {
     bar.innerHTML = `<button class="btn" id="signInBtn">Sign In to Sync</button>`;
     document.getElementById('signInBtn').onclick = openAuthModal;
@@ -1027,16 +1096,13 @@ function updateAccountBar() {
 
 function openAuthModal() {
   document.getElementById('authOverlay').classList.remove('hidden');
-  document.getElementById('authError').textContent = '';
-  document.getElementById('authMsg').textContent = '';
+  document.getElementById('authError').textContent = ''; document.getElementById('authMsg').textContent = '';
 }
-function closeAuthModal() {
-  document.getElementById('authOverlay').classList.add('hidden');
-}
+function closeAuthModal() { document.getElementById('authOverlay').classList.add('hidden'); }
 
 function friendlyAuthError(err) {
   const map = {
-    'auth/email-already-in-use': 'That email already has an account — try signing in instead.',
+    'auth/email-already-in-use': 'That email already has an account.',
     'auth/invalid-email': 'That email address looks invalid.',
     'auth/weak-password': 'Password must be at least 6 characters.',
     'auth/user-not-found': 'No account found with that email.',
@@ -1051,55 +1117,32 @@ function handleAuthSubmit(mode) {
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPass').value;
   const errEl = document.getElementById('authError');
-  const msgEl = document.getElementById('authMsg');
-  errEl.textContent = ''; msgEl.textContent = '';
+  errEl.textContent = '';
   if (!email || !pass) { errEl.textContent = 'Enter an email and password.'; return; }
   if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
-  const action = mode === 'signup'
-    ? auth.createUserWithEmailAndPassword(email, pass)
-    : auth.signInWithEmailAndPassword(email, pass);
-  action.then(() => { closeAuthModal(); })
-    .catch(err => { errEl.textContent = friendlyAuthError(err); });
+  const action = mode === 'signup' ? auth.createUserWithEmailAndPassword(email, pass) : auth.signInWithEmailAndPassword(email, pass);
+  action.then(() => closeAuthModal()).catch(err => errEl.textContent = friendlyAuthError(err));
 }
 function handlePasswordReset() {
   const email = document.getElementById('authEmail').value.trim();
-  const errEl = document.getElementById('authError');
-  const msgEl = document.getElementById('authMsg');
+  const errEl = document.getElementById('authError'), msgEl = document.getElementById('authMsg');
   errEl.textContent = ''; msgEl.textContent = '';
   if (!email) { errEl.textContent = 'Enter your email above first.'; return; }
-  auth.sendPasswordResetEmail(email)
-    .then(() => { msgEl.textContent = 'Password reset email sent.'; })
-    .catch(err => { errEl.textContent = friendlyAuthError(err); });
+  auth.sendPasswordResetEmail(email).then(() => msgEl.textContent = 'Password reset email sent.').catch(err => errEl.textContent = friendlyAuthError(err));
 }
-function handleSignOut() {
-  if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
-  auth.signOut();
-}
+function handleSignOut() { if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; } auth.signOut(); }
 
-function initAuthUI() {
-  document.getElementById('authCloseBtn').onclick = closeAuthModal;
-  document.getElementById('authOverlay').addEventListener('click', e => {
-    if (e.target.id === 'authOverlay') closeAuthModal();
-  });
-  document.getElementById('authSignInBtn').onclick = () => handleAuthSubmit('signin');
-  document.getElementById('authSignUpBtn').onclick = () => handleAuthSubmit('signup');
-  document.getElementById('authForgotBtn').onclick = handlePasswordReset;
-}
-
-initAuthUI();
+document.getElementById('authCloseBtn').onclick = closeAuthModal;
+document.getElementById('authOverlay').addEventListener('click', e => { if (e.target.id === 'authOverlay') closeAuthModal(); });
+document.getElementById('authSignInBtn').onclick = () => handleAuthSubmit('signin');
+document.getElementById('authSignUpBtn').onclick = () => handleAuthSubmit('signup');
+document.getElementById('authForgotBtn').onclick = handlePasswordReset;
 updateAccountBar();
 
 if (cloudReady) {
   auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      updateAccountBar();
-      reconcileOnSignIn();
-    } else {
-      currentUser = null;
-      if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
-      updateAccountBar();
-    }
+    if (user) { currentUser = user; updateAccountBar(); reconcileOnSignIn(); }
+    else { currentUser = null; if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; } updateAccountBar(); }
   });
 }
 </script>
