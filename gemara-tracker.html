@@ -6,6 +6,44 @@
 <title>גמרא Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!--
+  ═══════════════════════════════════════════════════════════════
+  CLOUD SYNC SETUP (do this once — takes about 5 minutes)
+  ═══════════════════════════════════════════════════════════════
+  1. Go to https://console.firebase.google.com → "Add project" (free).
+  2. In the left sidebar: Build → Authentication → Get started →
+     under "Sign-in method" enable "Email/Password".
+  3. In the left sidebar: Build → Firestore Database → Create database
+     (any region is fine, start in "production mode").
+  4. In Firestore → Rules tab, replace the contents with:
+
+       rules_version = '2';
+       service cloud.firestore {
+         match /databases/{database}/documents {
+           match /users/{userId} {
+             allow read, write: if request.auth != null && request.auth.uid == userId;
+           }
+         }
+       }
+
+  5. Click the gear icon → Project settings → scroll to "Your apps" →
+     click the </> (web) icon → register the app → it will show you
+     a `firebaseConfig` object. Copy it into the JS below, replacing
+     the placeholder values.
+  6. Still in Project settings, or under Authentication → Settings →
+     Authorized domains, add the domain this page is hosted on, e.g.
+     yourusername.github.io (GitHub Pages domains aren't authorized
+     by default, so sign-in will fail until you add it).
+  That's it — reload the page and "Sign In to Sync" will work.
+  Until you do this, the tracker keeps working exactly as before,
+  saving locally to this browser only.
+  ═══════════════════════════════════════════════════════════════
+-->
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+
 <style>
 :root {
   --bg: #0f0e0c;
@@ -29,11 +67,21 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monosp
 header {
   padding: 30px 40px 24px;
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: flex-end; gap: 16px;
+  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
   background: linear-gradient(180deg,#151410 0%,transparent 100%);
 }
 header h1 { font-family:'Frank Ruhl Libre',serif; font-size:2.4rem; font-weight:900; color:var(--gold-light); letter-spacing:-0.02em; line-height:1; }
 header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12em; text-transform:uppercase; padding-bottom:3px; }
+
+/* ACCOUNT BAR */
+.account-bar { margin-left:auto; display:flex; align-items:center; gap:10px; align-self:center; font-size:0.62rem; color:var(--text-dim); flex-wrap:wrap; }
+.account-bar .email { color:var(--text); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-bar .confignote { opacity:0.55; letter-spacing:0.04em; }
+.sync-dot { width:6px; height:6px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+.sync-dot.synced { background: var(--learned-border); }
+.sync-dot.syncing { background: var(--accent); animation: syncpulse 1s ease-in-out infinite; }
+.sync-dot.error { background:#c08070; }
+@keyframes syncpulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
 /* TABS */
 .tabs { display:flex; padding:0 40px; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; gap:0; }
@@ -155,10 +203,31 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 .shas-banner-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:3px; transition:width .4s; }
 .shas-banner-sub { font-size:0.6rem; color:var(--text-dim); letter-spacing:0.06em; }
 
+/* ── AUTH / SYNC MODALS ── */
+.modal-overlay { position:fixed; inset:0; background:rgba(10,9,7,0.82); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+.modal-overlay.hidden { display:none; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 26px; max-width:380px; width:100%; }
+.modal-box h2 { font-family:'Frank Ruhl Libre',serif; font-size:1.35rem; font-weight:700; color:var(--gold-light); margin-bottom:6px; }
+.modal-sub { font-size:0.64rem; line-height:1.6; color:var(--text-dim); margin-bottom:18px; letter-spacing:0.02em; }
+.field { margin-bottom:12px; }
+.field label { display:block; font-size:0.58rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px; }
+.field input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:9px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:0.8rem; outline:none; }
+.field input:focus { border-color:var(--accent-dim); }
+.modal-actions { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+.modal-btn { font-family:'DM Mono',monospace; font-size:0.68rem; letter-spacing:0.03em; padding:11px 10px; border-radius:var(--radius); border:1px solid var(--border); background:none; color:var(--text); cursor:pointer; transition:border-color .15s,color .15s,background .15s; text-align:center; line-height:1.4; }
+.modal-btn.primary { background:var(--accent-dim); border-color:var(--accent-dim); color:#0f0e0c; font-weight:600; }
+.modal-btn.primary:hover { background:var(--accent); border-color:var(--accent); }
+.modal-btn:hover { border-color:var(--accent-dim); color:var(--gold-light); }
+.modal-link { text-align:center; font-size:0.6rem; color:var(--text-dim); cursor:pointer; text-decoration:underline; margin-top:10px; }
+.modal-link:hover { color:var(--gold-light); }
+.modal-error { font-size:0.62rem; color:#e08a8a; margin-top:8px; min-height:14px; line-height:1.5; }
+.modal-msg { font-size:0.62rem; color:var(--learned-text); margin-top:8px; min-height:14px; line-height:1.5; }
+
 /* RESPONSIVE */
 @media(max-width:600px){
   header { padding:20px 16px 18px; }
   header h1 { font-size:2rem; }
+  .account-bar { width:100%; margin-left:0; justify-content:space-between; margin-top:6px; }
   .tabs { padding:0 16px; }
   .view { padding:20px 16px 60px; }
   .ov-grid { grid-template-columns:1fr 1fr; }
@@ -174,7 +243,45 @@ header .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12
 <header>
   <div><h1>גמרא Tracker</h1></div>
   <div class="subtitle">Bavli · Personal Limud Log</div>
+  <div class="account-bar" id="accountBar"></div>
 </header>
+
+<!-- SIGN IN / SIGN UP MODAL -->
+<div class="modal-overlay hidden" id="authOverlay">
+  <div class="modal-box">
+    <h2>Sync Your Progress</h2>
+    <div class="modal-sub">Sign in to keep your Gemara progress in sync across every device you learn from.</div>
+    <div class="field">
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label for="authPass">Password</label>
+      <input type="password" id="authPass" autocomplete="current-password" />
+    </div>
+    <div class="modal-error" id="authError"></div>
+    <div class="modal-msg" id="authMsg"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="authSignInBtn">Sign In</button>
+      <button class="modal-btn" id="authSignUpBtn">Create Account</button>
+    </div>
+    <div class="modal-link" id="authForgotBtn">Forgot password?</div>
+    <div class="modal-link" id="authCloseBtn">Continue without an account</div>
+  </div>
+</div>
+
+<!-- CONFLICT RESOLUTION MODAL (shown once, only if local + cloud both have progress) -->
+<div class="modal-overlay hidden" id="conflictOverlay">
+  <div class="modal-box">
+    <h2>Progress Found in Two Places</h2>
+    <div class="modal-sub">This device has learning progress that hasn't been synced yet, and your account already has progress saved in the cloud. How should we combine them?</div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="conflictMerge">Merge — keep everything learned on either</button>
+      <button class="modal-btn" id="conflictCloud">Use the cloud version only</button>
+      <button class="modal-btn" id="conflictLocal">Use this device's version only</button>
+    </div>
+  </div>
+</div>
 
 <div class="tabs" id="tabs"></div>
 <div id="views"></div>
@@ -391,7 +498,10 @@ function getLearnedSet(mId) {
   try { const r = localStorage.getItem('g_'+mId); return r ? new Set(JSON.parse(r)) : new Set(); }
   catch { return new Set(); }
 }
-function saveLearnedSet(mId, set) { localStorage.setItem('g_'+mId, JSON.stringify([...set])); }
+function saveLearnedSet(mId, set) {
+  localStorage.setItem('g_'+mId, JSON.stringify([...set]));
+  scheduleCloudPush();
+}
 function toggleAmud(mId, key) {
   const s = getLearnedSet(mId);
   s.has(key) ? s.delete(key) : s.add(key);
@@ -721,6 +831,277 @@ function renderAll() {
 }
 
 renderAll();
+
+// ═══════════════════════════════════════════════════════════════
+// CLOUD SYNC (Firebase Auth + Firestore) — see setup comment in <head>
+// ═══════════════════════════════════════════════════════════════
+
+// Replace these placeholder values with the config Firebase gives you
+// when you register a Web app in your Firebase project settings.
+const firebaseConfig = {
+  apiKey: "AIzaSyCdBA_DVEupBTrwRVYKhvVw8KU8SKMpxOE",
+  authDomain: "gemara-tracker.firebaseapp.com",
+  projectId: "gemara-tracker",
+  storageBucket: "gemara-tracker.firebasestorage.app",
+  messagingSenderId: "423553680704",
+  appId: "1:423553680704:web:c8f055382016b3370366a5",
+  measurementId: "G-PBV5LH1JNP"
+};
+
+let auth = null, db = null, cloudReady = false;
+let currentUser = null;
+let unsubSnapshot = null;
+let pushTimer = null;
+
+try {
+  if (firebaseConfig.apiKey && typeof firebase !== 'undefined' && typeof firebase.auth === 'function' && typeof firebase.firestore === 'function') {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    cloudReady = true;
+  }
+} catch (e) {
+  console.warn('Cloud sync not available:', e);
+  cloudReady = false;
+}
+
+// ── progress <-> plain-object helpers (used for cloud read/write) ──
+function getAllLocalProgress() {
+  const out = {};
+  Object.keys(M_BY_ID).forEach(id => {
+    const s = getLearnedSet(id);
+    if (s.size) out[id] = [...s];
+  });
+  return out;
+}
+function applyProgressObject(obj, opts = {}) {
+  Object.keys(M_BY_ID).forEach(id => {
+    if (obj[id] && obj[id].length) {
+      localStorage.setItem('g_'+id, JSON.stringify(obj[id]));
+    } else if (opts.clearMissing) {
+      localStorage.removeItem('g_'+id);
+    }
+  });
+}
+function unionProgress(a, b) {
+  const out = {};
+  Object.keys(M_BY_ID).forEach(id => {
+    const set = new Set([...(a[id]||[]), ...(b[id]||[])]);
+    if (set.size) out[id] = [...set];
+  });
+  return out;
+}
+
+// ── pushing local changes to the cloud (debounced) ──
+function scheduleCloudPush() {
+  if (!cloudReady || !currentUser) return;
+  setSyncStatus('syncing');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushToCloud, 900);
+}
+function pushToCloud() {
+  if (!cloudReady || !currentUser) return;
+  const progress = getAllLocalProgress();
+  db.collection('users').doc(currentUser.uid).set({
+    progress,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    setSyncStatus('synced');
+  }).catch(err => {
+    console.error('Cloud push failed:', err);
+    setSyncStatus('error');
+  });
+}
+
+// ── listening for changes made on other devices ──
+function attachListener() {
+  if (unsubSnapshot) unsubSnapshot();
+  unsubSnapshot = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+    if (!doc.exists) return;
+    const cloudProgress = doc.data().progress || {};
+    const localProgress = getAllLocalProgress();
+    if (JSON.stringify(cloudProgress) === JSON.stringify(localProgress)) {
+      setSyncStatus('synced');
+      return;
+    }
+    // A change arrived from another device — adopt it here too.
+    applyProgressObject(cloudProgress, {clearMissing:true});
+    setSyncStatus('synced');
+    renderAll();
+  }, err => {
+    console.error('Sync listener error:', err);
+    setSyncStatus('error');
+  });
+}
+
+// ── reconciling this device's local data with the cloud, on sign-in ──
+function reconcileOnSignIn() {
+  setSyncStatus('syncing');
+  const localProgress = getAllLocalProgress();
+  const hasLocal = Object.keys(localProgress).length > 0;
+  db.collection('users').doc(currentUser.uid).get().then(doc => {
+    const cloudProgress = (doc.exists && doc.data().progress) ? doc.data().progress : {};
+    const hasCloud = Object.keys(cloudProgress).length > 0;
+
+    if (!hasCloud) {
+      pushToCloud();
+      attachListener();
+      return;
+    }
+    if (!hasLocal) {
+      applyProgressObject(cloudProgress, {clearMissing:true});
+      renderAll();
+      attachListener();
+      setSyncStatus('synced');
+      return;
+    }
+    if (JSON.stringify(cloudProgress) === JSON.stringify(localProgress)) {
+      attachListener();
+      setSyncStatus('synced');
+      return;
+    }
+    openConflictModal(localProgress, cloudProgress);
+  }).catch(err => {
+    console.error('Reconcile failed:', err);
+    setSyncStatus('error');
+  });
+}
+
+function openConflictModal(localProgress, cloudProgress) {
+  document.getElementById('conflictOverlay').classList.remove('hidden');
+  document.getElementById('conflictMerge').onclick = () => {
+    const merged = unionProgress(localProgress, cloudProgress);
+    applyProgressObject(merged, {clearMissing:true});
+    renderAll();
+    closeConflictModal();
+    pushToCloud();
+    attachListener();
+  };
+  document.getElementById('conflictCloud').onclick = () => {
+    applyProgressObject(cloudProgress, {clearMissing:true});
+    renderAll();
+    closeConflictModal();
+    attachListener();
+    setSyncStatus('synced');
+  };
+  document.getElementById('conflictLocal').onclick = () => {
+    closeConflictModal();
+    pushToCloud();
+    attachListener();
+  };
+}
+function closeConflictModal() {
+  document.getElementById('conflictOverlay').classList.add('hidden');
+}
+
+// ── auth UI ──
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  if (!dot || !label) return;
+  dot.className = 'sync-dot ' + status;
+  const map = { synced:'Synced', syncing:'Syncing…', error:'Sync error', offline:'Local only' };
+  label.textContent = map[status] || '';
+}
+
+function updateAccountBar() {
+  const bar = document.getElementById('accountBar');
+  if (!cloudReady) {
+    bar.innerHTML = `<span class="confignote">Cloud sync not configured</span>`;
+    return;
+  }
+  if (currentUser) {
+    bar.innerHTML = `
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="syncLabel"></span>
+      <span class="email">${currentUser.email}</span>
+      <button class="btn" id="signOutBtn">Sign Out</button>
+    `;
+    document.getElementById('signOutBtn').onclick = handleSignOut;
+    setSyncStatus('synced');
+  } else {
+    bar.innerHTML = `<button class="btn" id="signInBtn">Sign In to Sync</button>`;
+    document.getElementById('signInBtn').onclick = openAuthModal;
+  }
+}
+
+function openAuthModal() {
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authMsg').textContent = '';
+}
+function closeAuthModal() {
+  document.getElementById('authOverlay').classList.add('hidden');
+}
+
+function friendlyAuthError(err) {
+  const map = {
+    'auth/email-already-in-use': 'That email already has an account — try signing in instead.',
+    'auth/invalid-email': 'That email address looks invalid.',
+    'auth/weak-password': 'Password must be at least 6 characters.',
+    'auth/user-not-found': 'No account found with that email.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/too-many-requests': 'Too many attempts — try again in a bit.'
+  };
+  return map[err.code] || err.message;
+}
+
+function handleAuthSubmit(mode) {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authError');
+  const msgEl = document.getElementById('authMsg');
+  errEl.textContent = ''; msgEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Enter an email and password.'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+  const action = mode === 'signup'
+    ? auth.createUserWithEmailAndPassword(email, pass)
+    : auth.signInWithEmailAndPassword(email, pass);
+  action.then(() => { closeAuthModal(); })
+    .catch(err => { errEl.textContent = friendlyAuthError(err); });
+}
+function handlePasswordReset() {
+  const email = document.getElementById('authEmail').value.trim();
+  const errEl = document.getElementById('authError');
+  const msgEl = document.getElementById('authMsg');
+  errEl.textContent = ''; msgEl.textContent = '';
+  if (!email) { errEl.textContent = 'Enter your email above first.'; return; }
+  auth.sendPasswordResetEmail(email)
+    .then(() => { msgEl.textContent = 'Password reset email sent.'; })
+    .catch(err => { errEl.textContent = friendlyAuthError(err); });
+}
+function handleSignOut() {
+  if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
+  auth.signOut();
+}
+
+function initAuthUI() {
+  document.getElementById('authCloseBtn').onclick = closeAuthModal;
+  document.getElementById('authOverlay').addEventListener('click', e => {
+    if (e.target.id === 'authOverlay') closeAuthModal();
+  });
+  document.getElementById('authSignInBtn').onclick = () => handleAuthSubmit('signin');
+  document.getElementById('authSignUpBtn').onclick = () => handleAuthSubmit('signup');
+  document.getElementById('authForgotBtn').onclick = handlePasswordReset;
+}
+
+initAuthUI();
+updateAccountBar();
+
+if (cloudReady) {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      updateAccountBar();
+      reconcileOnSignIn();
+    } else {
+      currentUser = null;
+      if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
+      updateAccountBar();
+    }
+  });
+}
 </script>
 </body>
 </html>
