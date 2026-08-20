@@ -43,12 +43,12 @@ header {
 /* MODE SWITCHER */
 .mode-switch {
   display: flex; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 4px; gap: 4px;
+  border-radius: 8px; padding: 4px; gap: 4px; flex-wrap: wrap;
 }
 .mode-btn {
   background: none; border: none; padding: 8px 16px; font-family: 'Frank Ruhl Libre', serif;
   font-size: 1rem; color: var(--text-dim); cursor: pointer; border-radius: 6px;
-  transition: all 0.2s; outline: none;
+  transition: all 0.2s; outline: none; white-space: nowrap;
 }
 .mode-btn:hover { color: var(--text); }
 .mode-btn.active { background: var(--accent-dim); color: var(--text); font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
@@ -207,6 +207,7 @@ header {
   .daf-grid { grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); }
   .shas-banner-stats { gap:16px; }
   .shas-stat-val { font-size:1.4rem; }
+  .mode-btn { padding:7px 12px; font-size:0.9rem; }
 }
 </style>
 </head>
@@ -215,11 +216,12 @@ header {
 <header>
   <div class="header-left">
     <h1>לימוד Tracker</h1>
-    <div class="subtitle">Bavli & Mishnayos · Personal Limud Log</div>
+    <div class="subtitle">Bavli · Mishnayos · Shnayim Mikra · Personal Limud Log</div>
   </div>
   <div class="mode-switch">
     <button id="mode-bavli" class="mode-btn active">Bavli</button>
     <button id="mode-mishna" class="mode-btn">Mishnah</button>
+    <button id="mode-shnayim" class="mode-btn">Shnayim Mikra</button>
   </div>
   <div class="account-bar" id="accountBar"></div>
 </header>
@@ -546,31 +548,104 @@ const MISHNAYOS = [
 ]}
 ];
 
-// Flat lookup by id handles BOTH modes automatically for Firebase
+// ═══════════════════════════════════════════════════════════════
+// DATA — SHNAYIM MIKRA (all 54 parshiyos, each with its 7 aliyos)
+// ═══════════════════════════════════════════════════════════════
+const SHNAYIM_MIKRA = [
+{ seder:'Bereishis', masechtot:[
+  { id:'sm_bereishis', he:'בראשית', en:'Bereishis', type:'shnayim' },
+  { id:'sm_noach', he:'נח', en:'Noach', type:'shnayim' },
+  { id:'sm_lech_lecha', he:'לך לך', en:'Lech Lecha', type:'shnayim' },
+  { id:'sm_vayera', he:'וירא', en:'Vayera', type:'shnayim' },
+  { id:'sm_chayei_sara', he:'חיי שרה', en:'Chayei Sara', type:'shnayim' },
+  { id:'sm_toldot', he:'תולדות', en:'Toldot', type:'shnayim' },
+  { id:'sm_vayetzei', he:'ויצא', en:'Vayetzei', type:'shnayim' },
+  { id:'sm_vayishlach', he:'וישלח', en:'Vayishlach', type:'shnayim' },
+  { id:'sm_vayeshev', he:'וישב', en:'Vayeshev', type:'shnayim' },
+  { id:'sm_miketz', he:'מקץ', en:'Miketz', type:'shnayim' },
+  { id:'sm_vayigash', he:'ויגש', en:'Vayigash', type:'shnayim' },
+  { id:'sm_vayechi', he:'ויחי', en:'Vayechi', type:'shnayim' },
+]},
+{ seder:'Shemos', masechtot:[
+  { id:'sm_shemos', he:'שמות', en:'Shemos', type:'shnayim' },
+  { id:'sm_vaera', he:'וארא', en:'Vaera', type:'shnayim' },
+  { id:'sm_bo', he:'בא', en:'Bo', type:'shnayim' },
+  { id:'sm_beshalach', he:'בשלח', en:'Beshalach', type:'shnayim' },
+  { id:'sm_yisro', he:'יתרו', en:'Yisro', type:'shnayim' },
+  { id:'sm_mishpatim', he:'משפטים', en:'Mishpatim', type:'shnayim' },
+  { id:'sm_terumah', he:'תרומה', en:'Terumah', type:'shnayim' },
+  { id:'sm_tetzaveh', he:'תצוה', en:'Tetzaveh', type:'shnayim' },
+  { id:'sm_ki_tisa', he:'כי תשא', en:'Ki Tisa', type:'shnayim' },
+  { id:'sm_vayakhel', he:'ויקהל', en:'Vayakhel', type:'shnayim' },
+  { id:'sm_pekudei', he:'פקודי', en:'Pekudei', type:'shnayim' },
+]},
+{ seder:'Vayikra', masechtot:[
+  { id:'sm_vayikra', he:'ויקרא', en:'Vayikra', type:'shnayim' },
+  { id:'sm_tzav', he:'צו', en:'Tzav', type:'shnayim' },
+  { id:'sm_shmini', he:'שמיני', en:'Shmini', type:'shnayim' },
+  { id:'sm_tazria', he:'תזריע', en:'Tazria', type:'shnayim' },
+  { id:'sm_metzora', he:'מצרע', en:'Metzora', type:'shnayim' },
+  { id:'sm_achrei_mot', he:'אחרי מות', en:'Achrei Mot', type:'shnayim' },
+  { id:'sm_kedoshim', he:'קדושים', en:'Kedoshim', type:'shnayim' },
+  { id:'sm_emor', he:'אמור', en:'Emor', type:'shnayim' },
+  { id:'sm_behar', he:'בהר', en:'Behar', type:'shnayim' },
+  { id:'sm_bechukotai', he:'בחקתי', en:'Bechukotai', type:'shnayim' },
+]},
+{ seder:'Bamidbar', masechtot:[
+  { id:'sm_bamidbar', he:'במדבר', en:'Bamidbar', type:'shnayim' },
+  { id:'sm_naso', he:'נשא', en:'Naso', type:'shnayim' },
+  { id:'sm_behaalotcha', he:'בהעלתך', en:"Beha'alotcha", type:'shnayim' },
+  { id:'sm_shlach', he:'שלח', en:"Sh'lach", type:'shnayim' },
+  { id:'sm_korach', he:'קרח', en:'Korach', type:'shnayim' },
+  { id:'sm_chukat', he:'חקת', en:'Chukat', type:'shnayim' },
+  { id:'sm_balak', he:'בלק', en:'Balak', type:'shnayim' },
+  { id:'sm_pinchas', he:'פינחס', en:'Pinchas', type:'shnayim' },
+  { id:'sm_matot', he:'מטות', en:'Matot', type:'shnayim' },
+  { id:'sm_masei', he:'מסעי', en:'Masei', type:'shnayim' },
+]},
+{ seder:'Devarim', masechtot:[
+  { id:'sm_devarim', he:'דברים', en:'Devarim', type:'shnayim' },
+  { id:'sm_vaetchanan', he:'ואתחנן', en:'Vaetchanan', type:'shnayim' },
+  { id:'sm_eikev', he:'עקב', en:'Eikev', type:'shnayim' },
+  { id:'sm_reeh', he:'ראה', en:"Re'eh", type:'shnayim' },
+  { id:'sm_shoftim', he:'שופטים', en:'Shoftim', type:'shnayim' },
+  { id:'sm_ki_teitzei', he:'כי תצא', en:'Ki Teitzei', type:'shnayim' },
+  { id:'sm_ki_tavo', he:'כי תבוא', en:'Ki Tavo', type:'shnayim' },
+  { id:'sm_nitzavim', he:'נצבים', en:'Nitzavim', type:'shnayim' },
+  { id:'sm_vayelech', he:'וילך', en:'Vayelech', type:'shnayim' },
+  { id:'sm_haazinu', he:'האזינו', en:'Haazinu', type:'shnayim' },
+  { id:'sm_vzot_haberacha', he:'וזאת הברכה', en:"V'Zot HaBerachah", type:'shnayim' },
+]},
+];
+
+// Flat lookup by id handles ALL modes automatically for Firebase
 const M_BY_ID = {};
 SHAS.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; }));
 MISHNAYOS.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; }));
+SHNAYIM_MIKRA.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; }));
 
 // ── STATE ─────────────────────────────────────────────────────
 let activeTab = 'overview';
 let currentMode = 'bavli';
 
-document.getElementById('mode-bavli').onclick = () => {
-  currentMode = 'bavli'; activeTab = 'overview';
-  document.getElementById('mode-bavli').classList.add('active');
-  document.getElementById('mode-mishna').classList.remove('active');
-  renderAll();
+const modeButtons = {
+  bavli: document.getElementById('mode-bavli'),
+  mishna: document.getElementById('mode-mishna'),
+  shnayim: document.getElementById('mode-shnayim')
 };
-
-document.getElementById('mode-mishna').onclick = () => {
-  currentMode = 'mishna'; activeTab = 'overview';
-  document.getElementById('mode-mishna').classList.add('active');
-  document.getElementById('mode-bavli').classList.remove('active');
+function setMode(mode) {
+  currentMode = mode; activeTab = 'overview';
+  Object.keys(modeButtons).forEach(k => modeButtons[k].classList.toggle('active', k === mode));
   renderAll();
-};
+}
+modeButtons.bavli.onclick = () => setMode('bavli');
+modeButtons.mishna.onclick = () => setMode('mishna');
+modeButtons.shnayim.onclick = () => setMode('shnayim');
 
 function getCurrentData() {
-  return currentMode === 'bavli' ? SHAS : MISHNAYOS;
+  if (currentMode === 'bavli') return SHAS;
+  if (currentMode === 'mishna') return MISHNAYOS;
+  return SHNAYIM_MIKRA;
 }
 
 // ── STORAGE ────────────────────────────────────────────────────
@@ -595,35 +670,44 @@ function getUnits(m) {
     for (let d = m.start; d <= m.end; d++) {
       list.push({key:`${d}a`}); list.push({key:`${d}b`});
     }
-  } else {
+  } else if (m.type === 'mishna') {
     m.mishnayos.forEach((count, pIdx) => {
       for(let i=1; i<=count; i++) list.push({key:`p${pIdx+1}_m${i}`});
     });
+  } else if (m.type === 'shnayim') {
+    for (let i = 1; i <= 7; i++) list.push({key:`a${i}`});
   }
   return list;
 }
 
 function totalUnits(m) {
   if (m.type === 'bavli') return (m.end - m.start + 1) * 2;
-  return m.mishnayos.reduce((a,b)=>a+b, 0);
+  if (m.type === 'mishna') return m.mishnayos.reduce((a,b)=>a+b, 0);
+  if (m.type === 'shnayim') return 7;
+  return 0;
 }
 
 function countPrimary(m, learned) {
   let n = 0;
   if (m.type === 'bavli') {
     for (let d = m.start; d <= m.end; d++) if (learned.has(`${d}a`) && learned.has(`${d}b`)) n++;
-  } else {
+  } else if (m.type === 'mishna') {
     m.mishnayos.forEach((count, pIdx) => {
       let full = true;
       for(let i=1; i<=count; i++) if (!learned.has(`p${pIdx+1}_m${i}`)) full = false;
       if(full) n++;
     });
+  } else if (m.type === 'shnayim') {
+    n = (learned.size === 7) ? 1 : 0;
   }
   return n;
 }
 
 function totalPrimary(m) {
-  return m.type === 'bavli' ? (m.end - m.start + 1) : m.mishnayos.length;
+  if (m.type === 'bavli') return (m.end - m.start + 1);
+  if (m.type === 'mishna') return m.mishnayos.length;
+  if (m.type === 'shnayim') return 1;
+  return 0;
 }
 
 function pct(done, total) { return total ? Math.round(done/total*100) : 0; }
@@ -633,6 +717,17 @@ function getStatus(m) {
   if (learned.size === 0) return 'unstarted';
   if (learned.size === totalUnits(m)) return 'completed';
   return 'inprogress';
+}
+
+function labelsForMode(mode) {
+  if (mode === 'bavli') return { pri:'Dapim', uni:'Amudim', item:'masechtot', itemCap:'Masechtot' };
+  if (mode === 'mishna') return { pri:'Perakim', uni:'Mishnayos', item:'masechtot', itemCap:'Masechtot' };
+  return { pri:'Parshiyos', uni:'Aliyos', item:'parshiyos', itemCap:'Parshiyos' };
+}
+
+function unstartedLabel(m, labelPri) {
+  if (m.type === 'shnayim') return `${totalUnits(m)} aliyos`;
+  return `${totalPrimary(m)} ${labelPri.toLowerCase()}`;
 }
 
 // ── TABS ──────────────────────────────────────────────────────
@@ -665,11 +760,9 @@ function renderOverview() {
 
   let totalPri = 0, learnedPri = 0, totalUni = 0, learnedUni = 0;
   let completedCount = 0;
-  
+
   const data = getCurrentData();
-  const isBavli = currentMode === 'bavli';
-  const labelPri = isBavli ? 'Dapim' : 'Perakim';
-  const labelUni = isBavli ? 'Amudim' : 'Mishnayos';
+  const { pri: labelPri, uni: labelUni, item: itemWord, itemCap: itemWordCap } = labelsForMode(currentMode);
 
   data.forEach(s => s.masechtot.forEach(m => {
     const learned = getLearnedSet(m.id);
@@ -699,7 +792,7 @@ function renderOverview() {
       </div>
       <div class="shas-stat">
         <span class="shas-stat-val dim">${completedCount}</span>
-        <span class="shas-stat-lbl">Masechtot finished</span>
+        <span class="shas-stat-lbl">${itemWordCap} finished</span>
       </div>
       <div class="shas-stat">
         <span class="shas-stat-val gold">${shasPct}%</span>
@@ -709,7 +802,7 @@ function renderOverview() {
     <div class="shas-banner-bar">
       <div class="shas-banner-fill" style="width:${shasPct}%"></div>
     </div>
-    <div class="shas-banner-sub">${totalPri.toLocaleString()} total ${labelPri.toLowerCase()} · ${data.reduce((a,s)=>a+s.masechtot.length,0)} masechtot</div>
+    <div class="shas-banner-sub">${totalPri.toLocaleString()} total ${labelPri.toLowerCase()} · ${data.reduce((a,s)=>a+s.masechtot.length,0)} ${itemWord}</div>
   `;
   wrap.appendChild(banner);
 
@@ -749,7 +842,7 @@ function renderOverview() {
     arrow.textContent = '▶';
     btn.appendChild(arrow);
     const lbl = document.createElement('span');
-    lbl.textContent = `Seder ${s.seder} · ${s.masechtot.length} masechtot`;
+    lbl.textContent = `${currentMode === 'shnayim' ? 'Chumash' : 'Seder'} ${s.seder} · ${s.masechtot.length} ${itemWord}`;
     btn.appendChild(lbl);
     const body = document.createElement('div'); body.className = 'seder-body';
     const miniGrid = document.createElement('div'); miniGrid.className = 'seder-mini-grid';
@@ -762,7 +855,7 @@ function renderOverview() {
       const st = getStatus(m);
       const card = document.createElement('div');
       card.className = 'mini-card' + (st==='inprogress'?' has-progress':st==='completed'?' completed':'');
-      card.innerHTML = `<span class="mini-card-name">${m.he}</span><div class="mini-card-info"><div>${m.en}</div><div class="pct">${p > 0 ? p+'%' : totalPrimary(m)+' ' + labelPri.toLowerCase()}</div></div>`;
+      card.innerHTML = `<span class="mini-card-name">${m.he}</span><div class="mini-card-info"><div>${m.en}</div><div class="pct">${p > 0 ? p+'%' : unstartedLabel(m, labelPri)}</div></div>`;
       card.onclick = () => { activeTab = m.id; renderAll(); };
       miniGrid.appendChild(card);
     });
@@ -782,15 +875,20 @@ function renderOverview() {
 function makeOvCard(m, labelPri, labelUni) {
   const learned = getLearnedSet(m.id);
   const amDone = learned.size, amTotal = totalUnits(m);
-  const dDone = countPrimary(m, learned), dTotal = totalPrimary(m);
   const p = pct(amDone, amTotal);
   const st = getStatus(m);
   const card = document.createElement('div');
   card.className = 'ov-card' + (st==='completed'?' completed':'');
+  let priRows = '';
+  if (m.type !== 'shnayim') {
+    const dDone = countPrimary(m, learned), dTotal = totalPrimary(m);
+    priRows = `
+    <div class="ov-row"><span>${labelPri} learned</span><span>${dDone} / ${dTotal}</span></div>
+    <div class="ov-row"><span>${labelPri} remaining</span><span>${dTotal - dDone}</span></div>`;
+  }
   card.innerHTML = `
     <h3>${m.he}<small>${m.en}</small></h3>
-    <div class="ov-row"><span>${labelPri} learned</span><span>${dDone} / ${dTotal}</span></div>
-    <div class="ov-row"><span>${labelPri} remaining</span><span>${dTotal - dDone}</span></div>
+    ${priRows}
     <div class="ov-row"><span>${labelUni} learned</span><span>${amDone} / ${amTotal}</span></div>
     <div class="ov-row"><span>Complete</span><span>${p}%</span></div>
     <div class="ov-bar"><div class="ov-fill" style="width:${p}%"></div></div>
@@ -799,7 +897,7 @@ function makeOvCard(m, labelPri, labelUni) {
   return card;
 }
 
-// ── MASECHET VIEW ────────────────────────────────────────────
+// ── MASECHET / PARSHA VIEW ────────────────────────────────────
 function renderMasechet(m) {
   const wrap = document.createElement('div');
   wrap.className = 'view' + (activeTab===m.id?' active':'');
@@ -807,16 +905,23 @@ function renderMasechet(m) {
 
   let learned = getLearnedSet(m.id);
   const amTotal = totalUnits(m), dTotal = totalPrimary(m);
-  
+
   const isBavli = m.type === 'bavli';
-  const labelPri = isBavli ? 'Dapim' : 'Perakim';
-  const labelUni = isBavli ? 'Amudim' : 'Mishnayos';
+  const isMishna = m.type === 'mishna';
+  const isShnayim = m.type === 'shnayim';
+  const labelPri = isBavli ? 'Dapim' : isMishna ? 'Perakim' : 'Parshiyos';
+  const labelUni = isBavli ? 'Amudim' : isMishna ? 'Mishnayos' : 'Aliyos';
 
   // stats bar
   const stats = document.createElement('div'); stats.className = 'stats-bar';
+  let priStatsHtml = '';
+  if (!isShnayim) {
+    priStatsHtml = `
+      <div class="stat"><span class="stat-label">${labelPri} learned</span><span class="stat-value green sv-dd">${countPrimary(m,learned)}</span></div>
+      <div class="stat"><span class="stat-label">${labelPri} remaining</span><span class="stat-value dim sv-dr">${dTotal - countPrimary(m,learned)}</span></div>`;
+  }
   stats.innerHTML = `
-    <div class="stat"><span class="stat-label">${labelPri} learned</span><span class="stat-value green sv-dd">${countPrimary(m,learned)}</span></div>
-    <div class="stat"><span class="stat-label">${labelPri} remaining</span><span class="stat-value dim sv-dr">${dTotal - countPrimary(m,learned)}</span></div>
+    ${priStatsHtml}
     <div class="stat"><span class="stat-label">${labelUni} learned</span><span class="stat-value green sv-ad">${learned.size}</span></div>
     <div class="stat"><span class="stat-label">${labelUni} remaining</span><span class="stat-value dim sv-ar">${amTotal - learned.size}</span></div>
     <div class="stat"><span class="stat-label">Complete</span><span class="stat-value sv-pct">${pct(learned.size,amTotal)}%</span></div>
@@ -829,8 +934,11 @@ function renderMasechet(m) {
   wrap.appendChild(stats);
 
   function rebuildStats() {
-    wrap.querySelector('.sv-dd').textContent = countPrimary(m,learned);
-    wrap.querySelector('.sv-dr').textContent = dTotal - countPrimary(m,learned);
+    const ddEl = wrap.querySelector('.sv-dd');
+    if (ddEl) {
+      ddEl.textContent = countPrimary(m,learned);
+      wrap.querySelector('.sv-dr').textContent = dTotal - countPrimary(m,learned);
+    }
     wrap.querySelector('.sv-ad').textContent = learned.size;
     wrap.querySelector('.sv-ar').textContent = amTotal - learned.size;
     const p = pct(learned.size, amTotal);
@@ -838,7 +946,7 @@ function renderMasechet(m) {
     wrap.querySelector('.progress-fill').style.width = p+'%';
   }
 
-  // Build perakim blocks dynamically for both modes
+  // Build content blocks per mode
   if (isBavli) {
     const perakim = m.perakim || [];
     const sorted = [...perakim].sort((a,b)=>a.start-b.start);
@@ -887,8 +995,7 @@ function renderMasechet(m) {
       block.appendChild(grid);
       wrap.appendChild(block);
     });
-  } else {
-    // Mishna Grid
+  } else if (isMishna) {
     m.mishnayos.forEach((mCount, pIdx) => {
       const block = document.createElement('div'); block.className = 'perek-block';
       const hdr = document.createElement('div'); hdr.className = 'perek-header';
@@ -922,6 +1029,38 @@ function renderMasechet(m) {
       block.appendChild(grid);
       wrap.appendChild(block);
     });
+  } else if (isShnayim) {
+    // Shnayim Mikra — one parsha, exactly 7 aliyos
+    const hebrewOrdinals = ['ראשון','שני','שלישי','רביעי','חמישי','ששי','שביעי'];
+    const block = document.createElement('div'); block.className = 'perek-block';
+    const hdr = document.createElement('div'); hdr.className = 'perek-header';
+    hdr.innerHTML = `<span class="perek-name">פרשת ${m.he}</span><span class="perek-dafim">7 Aliyos</span><span class="perek-pct"></span><div class="perek-mini-bar"><div class="perek-mini-fill"></div></div>`;
+
+    const pPct = hdr.querySelector('.perek-pct');
+    const miniFill = hdr.querySelector('.perek-mini-fill');
+
+    function refreshPerek() {
+      const p = pct(learned.size, 7);
+      pPct.textContent = p+'%'; miniFill.style.width = p+'%';
+    }
+    refreshPerek();
+    block.appendChild(hdr);
+
+    const grid = document.createElement('div'); grid.className = 'daf-grid';
+    for (let i = 1; i <= 7; i++) {
+      const key = `a${i}`;
+      const cell = document.createElement('div');
+      cell.className = 'amud-cell' + (learned.has(key)?' learned':'');
+      cell.innerHTML = `<span class="ck">✓</span><span class="daf-num">${i}</span><span class="amud-lbl">${hebrewOrdinals[i-1]}</span>`;
+      cell.onclick = () => {
+        learned = toggleUnit(m.id, key);
+        cell.classList.toggle('learned', learned.has(key));
+        rebuildStats(); refreshPerek(); renderTabs();
+      };
+      grid.appendChild(cell);
+    }
+    block.appendChild(grid);
+    wrap.appendChild(block);
   }
 
   setTimeout(() => {
