@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח לימוד · Study Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --bg: #0f0e0c;
+  --surface: #1a1915;
+  --surface2: #161512;
+  --border: #2e2c26;
+  --accent: #c8973a;
+  --accent-dim: #8a6424;
+  --gold-light: #f0c96a;
+  --text: #e8e0ce;
+  --text-dim: #7a7060;
+  --learned: #2d5236;
+  --learned-border: #4a8a5a;
+  --learned-text: #a8e6b8;
+  --warn: #c08070;
+  --warn-text: #e6b0a0;
+  --radius: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+header {
+  padding: 30px 40px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  background: linear-gradient(180deg,#151410 0%,transparent 100%);
+}
+.header-left h1 { font-family:'Frank Ruhl Libre',serif; font-size:2.2rem; font-weight:900; color:var(--gold-light); letter-spacing:-0.02em; line-height:1; }
+.header-left .subtitle { font-size:0.65rem; color:var(--text-dim); letter-spacing:0.12em; text-transform:uppercase; padding-bottom:3px; margin-top:8px;}
+.header-note { font-size:0.6rem; color:var(--text-dim); max-width:260px; line-height:1.5; }
+.header-right { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+
+/* PAGE NAV (cross-page menu / back button) */
+.page-nav { display:flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px; gap: 4px; }
+.page-nav-btn {
+  background: none; border: none; padding: 8px 14px; font-family: 'DM Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.04em; color: var(--text-dim); cursor: pointer; border-radius: 6px;
+  text-decoration: none; display:inline-flex; align-items:center; gap:6px; transition: all 0.2s; white-space: nowrap;
+}
+.page-nav-btn:hover { color: var(--text); }
+.page-nav-btn.active { background: var(--accent-dim); color: var(--text); font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+/* ACCOUNT BAR */
+.account-bar { display:flex; align-items:center; gap:10px; font-size:0.62rem; color:var(--text-dim); flex-wrap:wrap; justify-content:flex-end; }
+.account-bar .email { color:var(--text); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-bar .confignote { opacity:0.55; letter-spacing:0.04em; }
+.sync-dot { width:6px; height:6px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+.sync-dot.synced { background: var(--learned-border); }
+.sync-dot.syncing { background: var(--accent); animation: syncpulse 1s ease-in-out infinite; }
+.sync-dot.error { background:#c08070; }
+@keyframes syncpulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+/* AUTH MODALS */
+.modal-overlay { position:fixed; inset:0; background:rgba(10,9,7,0.82); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+.modal-overlay.hidden { display:none; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px 26px; max-width:380px; width:100%; }
+.modal-box h2 { font-family:'Frank Ruhl Libre',serif; font-size:1.35rem; font-weight:700; color:var(--gold-light); margin-bottom:6px; }
+.modal-sub { font-size:0.64rem; line-height:1.6; color:var(--text-dim); margin-bottom:18px; letter-spacing:0.02em; }
+.authf { margin-bottom:12px; }
+.authf label { display:block; font-size:0.58rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px; }
+.authf input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:9px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:0.8rem; outline:none; }
+.authf input:focus { border-color:var(--accent-dim); }
+.modal-actions { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+.modal-btn { font-family:'DM Mono',monospace; font-size:0.68rem; letter-spacing:0.03em; padding:11px 10px; border-radius:var(--radius); border:1px solid var(--border); background:none; color:var(--text); cursor:pointer; transition:border-color .15s,color .15s,background .15s; text-align:center; line-height:1.4; }
+.modal-btn.primary { background:var(--accent-dim); border-color:var(--accent-dim); color:#0f0e0c; font-weight:600; }
+.modal-btn.primary:hover { background:var(--accent); border-color:var(--accent); }
+.modal-btn:hover { border-color:var(--accent-dim); color:var(--gold-light); }
+.modal-link { text-align:center; font-size:0.6rem; color:var(--text-dim); cursor:pointer; text-decoration:underline; margin-top:10px; }
+.modal-link:hover { color:var(--gold-light); }
+.modal-error { font-size:0.62rem; color:#e08a8a; margin-top:8px; min-height:14px; line-height:1.5; }
+.modal-msg { font-size:0.62rem; color:var(--learned-text); margin-top:8px; min-height:14px; line-height:1.5; }
+
+.tabs { display:flex; padding:0 40px; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; gap:0; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { padding:12px 18px; font-family:'Frank Ruhl Libre',serif; font-size:1rem; color:var(--text-dim); cursor:pointer; border:none; border-bottom:2px solid transparent; white-space:nowrap; background:none; outline:none; transition:color .15s,border-color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--gold-light); border-bottom-color:var(--accent); }
+.tab .tc { font-family:'DM Mono',monospace; font-size:0.6rem; color:var(--text-dim); margin-left:5px; }
+.tab.active .tc { color:var(--accent-dim); }
+.tab.newplan { color: var(--accent); }
+
+.view { display:none; padding:28px 40px 60px; max-width:920px; }
+.view.active { display:block; }
+
+/* FORM */
+.form-section { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin-bottom:16px; }
+.form-section h2 { font-family:'Frank Ruhl Libre',serif; font-size:1.05rem; color:var(--accent); margin-bottom:14px; font-weight:700; }
+.field-row { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:12px; }
+.field-row:last-child { margin-bottom:0; }
+.field { flex:1; min-width:160px; }
+.field label { display:block; font-size:0.58rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; }
+.field select, .field input[type=text], .field input[type=number], .field input[type=date] {
+  width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:9px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:0.82rem; outline:none;
+}
+.field select:focus, .field input:focus { border-color:var(--accent-dim); }
+.field .hint { font-size:0.56rem; color:var(--text-dim); margin-top:4px; line-height:1.4; }
+
+.pillrow { display:flex; gap:6px; flex-wrap:wrap; }
+.pill {
+  background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:7px 14px;
+  font-family:'DM Mono',monospace; font-size:0.68rem; color:var(--text-dim); cursor:pointer; transition:all .15s; user-select:none;
+}
+.pill:hover { color:var(--text); border-color:var(--accent-dim); }
+.pill.active { background:var(--accent-dim); color:var(--text); border-color:var(--accent-dim); font-weight:600; }
+
+.daypills { display:flex; gap:5px; }
+.daypill {
+  width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+  background:var(--surface2); border:1px solid var(--border); border-radius:50%;
+  font-size:0.62rem; color:var(--text-dim); cursor:pointer; transition:all .15s; user-select:none;
+}
+.daypill:hover { color:var(--text); }
+.daypill.active { background:var(--accent-dim); color:var(--text); border-color:var(--accent-dim); font-weight:700; }
+
+.radio-row { display:flex; flex-direction:column; gap:8px; }
+.radio-opt { display:flex; align-items:flex-start; gap:9px; cursor:pointer; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface2); transition:border-color .15s; }
+.radio-opt:hover { border-color:var(--accent-dim); }
+.radio-opt.selected { border-color:var(--accent); background:rgba(200,151,58,0.08); }
+.radio-opt input { margin-top:3px; accent-color:var(--accent); }
+.radio-opt .rlabel { font-size:0.78rem; color:var(--text); font-family:'Frank Ruhl Libre',serif; }
+.radio-opt .rsub { font-size:0.58rem; color:var(--text-dim); margin-top:2px; }
+
+.subcollapse { display:none; margin-top:12px; padding:14px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); }
+.subcollapse.open { display:block; }
+
+.checkline { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+.checkline input { accent-color:var(--accent); width:15px; height:15px; }
+.checkline span { font-size:0.75rem; color:var(--text); }
+
+/* BUTTONS */
+.btn { font-family:'DM Mono',monospace; font-size:0.66rem; background:none; border:1px solid var(--border); border-radius:var(--radius); padding:8px 14px; cursor:pointer; letter-spacing:0.05em; transition:color .15s,border-color .15s; color:var(--text-dim); }
+.btn:hover { color:var(--gold-light); border-color:var(--accent-dim); }
+.btn.danger:hover { color:#c08070; border-color:#c08070; }
+.btn.primary { background:var(--accent-dim); border-color:var(--accent-dim); color:var(--text); font-weight:600; padding:11px 22px; font-size:0.72rem; }
+.btn.primary:hover { background:var(--accent); border-color:var(--accent); color:#0f0e0c; }
+.btn-row { display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
+
+.err-box { background:rgba(192,128,112,0.12); border:1px solid var(--warn); border-radius:var(--radius); padding:10px 14px; font-size:0.68rem; color:var(--warn-text); margin-bottom:14px; line-height:1.5; }
+
+/* RESULT / SUMMARY */
+.summary-box { background:linear-gradient(180deg,rgba(200,151,58,0.09),transparent); border:1px solid var(--accent-dim); border-radius:12px; padding:20px 22px; margin-bottom:18px; }
+.summary-box p { font-family:'Frank Ruhl Libre',serif; font-size:1.05rem; color:var(--gold-light); line-height:1.6; }
+.summary-box p.sub { font-family:'DM Mono',monospace; font-size:0.68rem; color:var(--text-dim); margin-top:8px; }
+.summary-box .compare-good { color:var(--learned-text); }
+.summary-box .compare-bad { color:var(--warn-text); }
+
+.stats-bar { display:flex; gap:24px; align-items:center; flex-wrap:wrap; margin-bottom:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
+.stat { display:flex; flex-direction:column; gap:2px; }
+.stat-label { font-size:0.56rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.stat-value { font-size:1.3rem; font-family:'Frank Ruhl Libre',serif; font-weight:700; color:var(--gold-light); }
+.stat-value.green { color:var(--learned-text); }
+.stat-value.dim { color:var(--text-dim); }
+.progress-bar { flex:1; min-width:140px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--accent-dim),var(--gold-light)); border-radius:3px; transition:width .3s; }
+
+.plan-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:12px; flex-wrap:wrap; }
+.plan-head h2 { font-family:'Frank Ruhl Libre',serif; font-size:1.5rem; color:var(--gold-light); }
+.plan-head .plan-meta { font-size:0.62rem; color:var(--text-dim); margin-top:4px; letter-spacing:0.03em; }
+
+.filter-row { display:flex; gap:6px; margin-bottom:16px; }
+
+/* CALENDAR / CHECKLIST */
+.day-group { margin-bottom:6px; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.day-group.today { border-color:var(--accent); }
+.day-header { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; background:var(--surface); }
+.day-header .dname { font-family:'Frank Ruhl Libre',serif; font-size:0.85rem; color:var(--text); }
+.day-group.today .dname { color:var(--gold-light); }
+.day-header .dname small { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:0.58rem; margin-left:8px; }
+.day-header .dcount { font-size:0.58rem; color:var(--text-dim); }
+.day-body { padding:2px 14px 8px; }
+.chunk-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--border); cursor:pointer; }
+.chunk-row:first-child { border-top:none; }
+.chunk-row input { accent-color:var(--learned-border); width:16px; height:16px; flex-shrink:0; }
+.chunk-row .clabel { font-family:'Frank Ruhl Libre',serif; font-size:0.85rem; color:var(--text); }
+.chunk-row .csub { font-size:0.56rem; color:var(--text-dim); margin-left:6px; }
+.chunk-row.done .clabel { color:var(--learned-text); text-decoration:line-through; text-decoration-color:var(--learned-border); }
+.chunk-row.done .csub { color:var(--learned-border); }
+
+.empty-note { font-size:0.7rem; color:var(--text-dim); padding:30px 10px; text-align:center; line-height:1.6; }
+
+@media(max-width:600px){
+  header { padding:20px 16px 18px; }
+  .header-left h1 { font-size:1.7rem; }
+  .tabs { padding:0 16px; }
+  .view { padding:20px 16px 60px; }
+  .field-row { gap:10px; }
+  .field { min-width:100%; }
+  .stats-bar { gap:14px; }
+  .page-nav-btn { padding:7px 10px; font-size:0.62rem; }
+  .header-right { align-items:flex-start; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>לוח לימוד</h1>
+    <div class="subtitle">Study Planner · Pace &amp; Deadline Calculator</div>
+  </div>
+  <div class="header-note">Set a pace and see your finish date, or set a deadline and see the pace you need. Sign in to keep your plans in sync across devices.</div>
+  <div class="header-right">
+    <nav class="page-nav">
+      <a href="gemara-tracker.html" class="page-nav-btn">📖 Tracker</a>
+      <a href="limud-planner.html" class="page-nav-btn active">🗓 Study Planner</a>
+    </nav>
+    <div class="account-bar" id="accountBar"></div>
+  </div>
+</header>
+
+<!-- SIGN IN / SIGN UP MODAL -->
+<div class="modal-overlay hidden" id="authOverlay">
+  <div class="modal-box">
+    <h2>Sync Your Progress</h2>
+    <div class="modal-sub">Sign in to keep your Study Planner in sync across every device — same account as your לימוד Tracker.</div>
+    <div class="authf">
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" autocomplete="email" />
+    </div>
+    <div class="authf">
+      <label for="authPass">Password</label>
+      <input type="password" id="authPass" autocomplete="current-password" />
+    </div>
+    <div class="modal-error" id="authError"></div>
+    <div class="modal-msg" id="authMsg"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="authSignInBtn">Sign In</button>
+      <button class="modal-btn" id="authSignUpBtn">Create Account</button>
+    </div>
+    <div class="modal-link" id="authForgotBtn">Forgot password?</div>
+    <div class="modal-link" id="authCloseBtn">Continue without an account</div>
+  </div>
+</div>
+
+<!-- CONFLICT RESOLUTION MODAL -->
+<div class="modal-overlay hidden" id="conflictOverlay">
+  <div class="modal-box">
+    <h2>Plans Found in Two Places</h2>
+    <div class="modal-sub">This device has study plans that haven't been synced yet, and your account already has plans saved in the cloud. How should we combine them?</div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="conflictMerge">Merge — keep plans &amp; checkmarks from both</button>
+      <button class="modal-btn" id="conflictCloud">Use the cloud version only</button>
+      <button class="modal-btn" id="conflictLocal">Use this device's version only</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+<div id="views"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA (derived from the user's Gemara/Mishnayos/Shnayim Mikra tracker)
+// ═══════════════════════════════════════════════════════════════
+const SHAS = [
+{ seder:'Zeraim', masechtot:[
+  { id:'brachos', he:'ברכות', en:'Brachos', start:2, end:64 },
+]},
+{ seder:'Moed', masechtot:[
+  { id:'shabbos', he:'שבת', en:'Shabbos', start:2, end:157 },
+  { id:'eruvin', he:'עירובין', en:'Eruvin', start:2, end:105 },
+  { id:'pesachim', he:'פסחים', en:'Pesachim', start:2, end:121 },
+  { id:'shekalim', he:'שקלים', en:'Shekalim', start:2, end:22 },
+  { id:'yoma', he:'יומא', en:'Yoma', start:2, end:88 },
+  { id:'sukkah', he:'סוכה', en:'Sukkah', start:2, end:56 },
+  { id:'beitzah', he:'ביצה', en:'Beitzah', start:2, end:40 },
+  { id:'rosh_hashana', he:'ראש השנה', en:'Rosh Hashana', start:2, end:35 },
+  { id:'taanis', he:'תענית', en:"Ta'anis", start:2, end:31 },
+  { id:'megillah', he:'מגילה', en:'Megillah', start:2, end:32 },
+  { id:'moed_katan', he:'מועד קטן', en:"Mo'ed Katan", start:2, end:29 },
+  { id:'chagigah', he:'חגיגה', en:'Chagigah', start:2, end:27 },
+]},
+{ seder:'Nashim', masechtot:[
+  { id:'yevamos', he:'יבמות', en:'Yevamos', start:2, end:122 },
+  { id:'kesubos', he:'כתובות', en:'Kesubos', start:2, end:112 },
+  { id:'nedarim', he:'נדרים', en:'Nedarim', start:2, end:91 },
+  { id:'nazir', he:'נזיר', en:'Nazir', start:2, end:66 },
+  { id:'sotah', he:'סוטה', en:'Sotah', start:2, end:49 },
+  { id:'gittin', he:'גיטין', en:'Gittin', start:2, end:90 },
+  { id:'kiddushin', he:'קידושין', en:'Kiddushin', start:2, end:82 },
+]},
+{ seder:'Nezikin', masechtot:[
+  { id:'bk', he:'בבא קמא', en:'Bava Kamma', start:2, end:119 },
+  { id:'bm', he:'בבא מציעא', en:'Bava Metzia', start:2, end:119 },
+  { id:'bb', he:'בבא בתרא', en:'Bava Basra', start:2, end:176 },
+  { id:'sanhedrin', he:'סנהדרין', en:'Sanhedrin', start:2, end:113 },
+  { id:'makkos', he:'מכות', en:'Makkot', start:2, end:24 },
+  { id:'shevuos', he:'שבועות', en:'Shevuos', start:2, end:49 },
+  { id:'avoda_zara', he:'עבודה זרה', en:'Avoda Zara', start:2, end:76 },
+  { id:'horayos', he:'הוריות', en:'Horayos', start:2, end:14 },
+]},
+{ seder:'Kodashim', masechtot:[
+  { id:'zevachim', he:'זבחים', en:'Zevachim', start:2, end:120 },
+  { id:'menachos', he:'מנחות', en:'Menachos', start:2, end:110 },
+  { id:'chulin', he:'חולין', en:'Chulin', start:2, end:142 },
+  { id:'bechoros', he:'בכורות', en:'Bechoros', start:2, end:61 },
+  { id:'erchin', he:'ערכין', en:'Erchin', start:2, end:34 },
+  { id:'temurah', he:'תמורה', en:'Temurah', start:2, end:34 },
+  { id:'kerisos', he:'כריתות', en:'Kerisos', start:2, end:28 },
+  { id:'meilah', he:'מעילה', en:'Meilah', start:2, end:22 },
+  { id:'niddah', he:'נדה', en:'Niddah', start:2, end:73 },
+]},
+];
+
+const MISHNAYOS = [
+{ seder:'Zeraim', masechtot:[
+  { id:'m_brachos', he:'ברכות', en:'Brachos', mishnayos:[5,8,6,5,5,8,5,8,5] },
+  { id:'m_peah', he:'פאה', en:'Peah', mishnayos:[6,8,8,11,8,11,8,9] },
+  { id:'m_demai', he:'דמאי', en:'Demai', mishnayos:[4,5,6,7,11,11,8] },
+  { id:'m_kilayim', he:'כלאים', en:'Kilayim', mishnayos:[9,11,7,9,8,9,8,6,10] },
+  { id:'m_sheviit', he:'שביעית', en:'Sheviit', mishnayos:[8,10,10,10,9,6,7,11,9,9] },
+  { id:'m_terumot', he:'תרומות', en:'Terumot', mishnayos:[10,6,9,13,9,6,7,12,7,12,10] },
+  { id:'m_maaserot', he:'מעשרות', en:'Maaserot', mishnayos:[8,8,10,6,8] },
+  { id:'m_msheni', he:'מעשר שני', en:'Maaser Sheni', mishnayos:[7,10,13,12,15] },
+  { id:'m_challah', he:'חלה', en:'Challah', mishnayos:[9,8,10,11] },
+  { id:'m_orlah', he:'ערלה', en:'Orlah', mishnayos:[9,17,9] },
+  { id:'m_bikkurim', he:'ביכורים', en:'Bikkurim', mishnayos:[11,11,12,5] },
+]},
+{ seder:'Moed', masechtot:[
+  { id:'m_shabbat', he:'שבת', en:'Shabbat', mishnayos:[11,7,6,2,4,10,4,7,7,6,6,6,7,4,3,8,8,3,6,5,3,6,5,5] },
+  { id:'m_eruvin', he:'עירובין', en:'Eruvin', mishnayos:[10,6,9,11,9,10,11,11,4,15] },
+  { id:'m_pesachim', he:'פסחים', en:'Pesachim', mishnayos:[7,8,8,9,10,6,13,8,11,9] },
+  { id:'m_shekalim', he:'שקלים', en:'Shekalim', mishnayos:[7,5,4,9,6,6,7,8] },
+  { id:'m_yoma', he:'יומא', en:'Yoma', mishnayos:[8,7,11,6,7,8,5,9] },
+  { id:'m_sukkah', he:'סוכה', en:'Sukkah', mishnayos:[11,9,15,10,8] },
+  { id:'m_beitzah', he:'ביצה', en:'Beitzah', mishnayos:[10,11,8,7,7] },
+  { id:'m_rosh_hashana', he:'ראש השנה', en:'Rosh Hashanah', mishnayos:[9,10,9,9] },
+  { id:'m_taanit', he:'תענית', en:'Taanit', mishnayos:[7,10,9,8] },
+  { id:'m_megillah', he:'מגילה', en:'Megillah', mishnayos:[11,6,6,10] },
+  { id:'m_moed_katan', he:'מועד קטן', en:'Moed Katan', mishnayos:[10,5,9] },
+  { id:'m_chagigah', he:'חגיגה', en:'Chagigah', mishnayos:[8,7,8] },
+]},
+{ seder:'Nashim', masechtot:[
+  { id:'m_yevamot', he:'יבמות', en:'Yevamot', mishnayos:[4,10,10,13,6,6,6,6,6,9,7,6,13,9,10,7] },
+  { id:'m_ketubot', he:'כתובות', en:'Ketubot', mishnayos:[10,10,9,12,9,7,10,8,9,6,6,4,11] },
+  { id:'m_nedarim', he:'נדרים', en:'Nedarim', mishnayos:[4,5,11,8,6,10,9,7,10,8,12] },
+  { id:'m_nazir', he:'נזיר', en:'Nazir', mishnayos:[7,10,7,7,7,11,4,2,5] },
+  { id:'m_sotah', he:'סוטה', en:'Sotah', mishnayos:[9,6,8,5,5,4,8,9,15] },
+  { id:'m_gittin', he:'גיטין', en:'Gittin', mishnayos:[6,7,8,9,9,7,9,10,10] },
+  { id:'m_kiddushin', he:'קידושין', en:'Kiddushin', mishnayos:[10,10,13,14] },
+]},
+{ seder:'Nezikin', masechtot:[
+  { id:'m_bava_kamma', he:'בבא קמא', en:'Bava Kamma', mishnayos:[10,11,11,9,7,6,7,7,12,10] },
+  { id:'m_bava_metzia', he:'בבא מציעא', en:'Bava Metzia', mishnayos:[8,11,12,12,11,8,11,9,13,6] },
+  { id:'m_bava_batra', he:'בבא בתרא', en:'Bava Batra', mishnayos:[6,14,8,9,11,8,4,8,10,8] },
+  { id:'m_sanhedrin', he:'סנהדרין', en:'Sanhedrin', mishnayos:[6,5,8,5,5,6,11,7,6,6,11] },
+  { id:'m_makkot', he:'מכות', en:'Makkot', mishnayos:[10,8,16] },
+  { id:'m_shevuot', he:'שבועות', en:'Shevuot', mishnayos:[7,5,11,13,5,7,8,6] },
+  { id:'m_eduyot', he:'עדויות', en:'Eduyot', mishnayos:[14,10,12,12,7,3,9,7] },
+  { id:'m_avodah_zarah', he:'עבודה זרה', en:'Avodah Zarah', mishnayos:[9,7,10,12,12] },
+  { id:'m_avot', he:'אבות', en:'Avot', mishnayos:[18,16,18,22,23,11] },
+  { id:'m_horayot', he:'הוריות', en:'Horayot', mishnayos:[5,7,8] },
+]},
+{ seder:'Kodashim', masechtot:[
+  { id:'m_zevachim', he:'זבחים', en:'Zevachim', mishnayos:[4,5,6,6,8,7,6,12,7,8,8,6,8,10] },
+  { id:'m_menachot', he:'מנחות', en:'Menachot', mishnayos:[4,5,7,5,9,7,3,7,9,9,9,5,11] },
+  { id:'m_chullin', he:'חולין', en:'Chullin', mishnayos:[7,10,7,7,5,7,6,6,8,4,2,5] },
+  { id:'m_bekhorot', he:'בכורות', en:'Bekhorot', mishnayos:[7,9,4,10,6,12,7,10,8] },
+  { id:'m_arakhin', he:'ערכין', en:'Arakhin', mishnayos:[4,6,5,4,6,6,5,7,8] },
+  { id:'m_temurah', he:'תמורה', en:'Temurah', mishnayos:[6,3,5,4,6,5,6] },
+  { id:'m_keritot', he:'כריתות', en:'Keritot', mishnayos:[7,6,10,3,8,9] },
+  { id:'m_meilah', he:'מעילה', en:'Meilah', mishnayos:[4,9,8,6,5,6] },
+  { id:'m_tamid', he:'תמיד', en:'Tamid', mishnayos:[4,5,9,3,6,3,3] },
+  { id:'m_middot', he:'מידות', en:'Middot', mishnayos:[9,6,8,7,4] },
+  { id:'m_kinnim', he:'קינים', en:'Kinnim', mishnayos:[4,5,6] },
+]},
+{ seder:'Taharot', masechtot:[
+  { id:'m_kelim', he:'כלים', en:'Kelim', mishnayos:[9,8,8,4,11,4,6,11,8,8,9,8,8,8,6,8,17,9,10,7,3,10,5,17,9,9,12,10,8,4] },
+  { id:'m_oholot', he:'אהלות', en:'Oholot', mishnayos:[8,7,7,3,6,7,6,6,16,7,9,8,6,7,10,5,5,10] },
+  { id:'m_negaim', he:'נגעים', en:'Negaim', mishnayos:[6,5,8,11,5,8,5,10,3,10,11,7,12,13] },
+  { id:'m_parah', he:'פרה', en:'Parah', mishnayos:[4,5,11,4,9,5,12,11,9,6,9,11] },
+  { id:'m_taharot', he:'טהרות', en:'Taharot', mishnayos:[9,8,8,13,9,10,9,9,9,8] },
+  { id:'m_mikvaot', he:'מקואות', en:'Mikvaot', mishnayos:[8,10,4,5,6,11,7,5,7,8] },
+  { id:'m_niddah', he:'נדה', en:'Niddah', mishnayos:[7,7,7,7,9,14,5,4,11,8] },
+  { id:'m_makhshirin', he:'מכשירין', en:'Makhshirin', mishnayos:[6,11,8,10,11,8] },
+  { id:'m_zavim', he:'זבים', en:'Zavim', mishnayos:[6,4,3,7,12] },
+  { id:'m_tevul_yom', he:'טבול יום', en:'Tevul Yom', mishnayos:[5,8,6,7] },
+  { id:'m_yadayim', he:'ידים', en:'Yadayim', mishnayos:[5,4,2,8] },
+  { id:'m_uktzin', he:'עוקצים', en:'Uktzin', mishnayos:[6,10,12] },
+]}
+];
+
+const SHNAYIM_MIKRA = [
+{ seder:'Bereishis', masechtot:[
+  { id:'sm_bereishis', he:'בראשית', en:'Bereishis' },
+  { id:'sm_noach', he:'נח', en:'Noach' },
+  { id:'sm_lech_lecha', he:'לך לך', en:'Lech Lecha' },
+  { id:'sm_vayera', he:'וירא', en:'Vayera' },
+  { id:'sm_chayei_sara', he:'חיי שרה', en:'Chayei Sara' },
+  { id:'sm_toldot', he:'תולדות', en:'Toldot' },
+  { id:'sm_vayetzei', he:'ויצא', en:'Vayetzei' },
+  { id:'sm_vayishlach', he:'וישלח', en:'Vayishlach' },
+  { id:'sm_vayeshev', he:'וישב', en:'Vayeshev' },
+  { id:'sm_miketz', he:'מקץ', en:'Miketz' },
+  { id:'sm_vayigash', he:'ויגש', en:'Vayigash' },
+  { id:'sm_vayechi', he:'ויחי', en:'Vayechi' },
+]},
+{ seder:'Shemos', masechtot:[
+  { id:'sm_shemos', he:'שמות', en:'Shemos' },
+  { id:'sm_vaera', he:'וארא', en:'Vaera' },
+  { id:'sm_bo', he:'בא', en:'Bo' },
+  { id:'sm_beshalach', he:'בשלח', en:'Beshalach' },
+  { id:'sm_yisro', he:'יתרו', en:'Yisro' },
+  { id:'sm_mishpatim', he:'משפטים', en:'Mishpatim' },
+  { id:'sm_terumah', he:'תרומה', en:'Terumah' },
+  { id:'sm_tetzaveh', he:'תצוה', en:'Tetzaveh' },
+  { id:'sm_ki_tisa', he:'כי תשא', en:'Ki Tisa' },
+  { id:'sm_vayakhel', he:'ויקהל', en:'Vayakhel' },
+  { id:'sm_pekudei', he:'פקודי', en:'Pekudei' },
+]},
+{ seder:'Vayikra', masechtot:[
+  { id:'sm_vayikra', he:'ויקרא', en:'Vayikra' },
+  { id:'sm_tzav', he:'צו', en:'Tzav' },
+  { id:'sm_shmini', he:'שמיני', en:'Shmini' },
+  { id:'sm_tazria', he:'תזריע', en:'Tazria' },
+  { id:'sm_metzora', he:'מצרע', en:'Metzora' },
+  { id:'sm_achrei_mot', he:'אחרי מות', en:'Achrei Mot' },
+  { id:'sm_kedoshim', he:'קדושים', en:'Kedoshim' },
+  { id:'sm_emor', he:'אמור', en:'Emor' },
+  { id:'sm_behar', he:'בהר', en:'Behar' },
+  { id:'sm_bechukotai', he:'בחקתי', en:'Bechukotai' },
+]},
+{ seder:'Bamidbar', masechtot:[
+  { id:'sm_bamidbar', he:'במדבר', en:'Bamidbar' },
+  { id:'sm_naso', he:'נשא', en:'Naso' },
+  { id:'sm_behaalotcha', he:'בהעלתך', en:"Beha'alotcha" },
+  { id:'sm_shlach', he:'שלח', en:"Sh'lach" },
+  { id:'sm_korach', he:'קרח', en:'Korach' },
+  { id:'sm_chukat', he:'חקת', en:'Chukat' },
+  { id:'sm_balak', he:'בלק', en:'Balak' },
+  { id:'sm_pinchas', he:'פינחס', en:'Pinchas' },
+  { id:'sm_matot', he:'מטות', en:'Matot' },
+  { id:'sm_masei', he:'מסעי', en:'Masei' },
+]},
+{ seder:'Devarim', masechtot:[
+  { id:'sm_devarim', he:'דברים', en:'Devarim' },
+  { id:'sm_vaetchanan', he:'ואתחנן', en:'Vaetchanan' },
+  { id:'sm_eikev', he:'עקב', en:'Eikev' },
+  { id:'sm_reeh', he:'ראה', en:"Re'eh" },
+  { id:'sm_shoftim', he:'שופטים', en:'Shoftim' },
+  { id:'sm_ki_teitzei', he:'כי תצא', en:'Ki Teitzei' },
+  { id:'sm_ki_tavo', he:'כי תבוא', en:'Ki Tavo' },
+  { id:'sm_nitzavim', he:'נצבים', en:'Nitzavim' },
+  { id:'sm_vayelech', he:'וילך', en:'Vayelech' },
+  { id:'sm_haazinu', he:'האזינו', en:'Haazinu' },
+  { id:'sm_vzot_haberacha', he:'וזאת הברכה', en:"V'Zot HaBerachah" },
+]},
+];
+
+const CATS = {
+  bavli: { data: SHAS, name:'Bavli', units:['amud','daf'], unitLabels:{amud:'Amud',daf:'Daf'}, plural:{amud:'Amudim',daf:'Dapim'}, itemWord:'Masechtos', itemWordSing:'Masechta', groupWord:'Seder', allWord:'the entire Shas' },
+  mishna: { data: MISHNAYOS, name:'Mishnayos', units:['mishnah','perek'], unitLabels:{mishnah:'Mishnah',perek:'Perek'}, plural:{mishnah:'Mishnayos',perek:'Perakim'}, itemWord:'Masechtos', itemWordSing:'Masechta', groupWord:'Seder', allWord:'all of Shishah Sidrei Mishnah' },
+  shnayim: { data: SHNAYIM_MIKRA, name:'Shnayim Mikra', units:['aliyah','parsha'], unitLabels:{aliyah:'Aliyah',parsha:'Parsha'}, plural:{aliyah:'Aliyos',parsha:'Parshiyos'}, itemWord:'Parshiyos', itemWordSing:'Parsha', groupWord:'Chumash', allWord:'the entire Chumash' },
+};
+
+const M_BY_ID = {};
+Object.values(CATS).forEach(c => c.data.forEach(s => s.masechtot.forEach(m => { M_BY_ID[m.id] = m; m.seder = s.seder; })));
+
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_NAMES_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Shabbos'];
+
+// ═══════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════════
+function todayLocal() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function parseDateStr(s) { const [y,m,d] = s.split('-').map(Number); const dt = new Date(y, m-1, d); dt.setHours(0,0,0,0); return dt; }
+function dateToStr(d) { const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function fmtDate(d) { return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'}); }
+function fmtDateShort(d) { return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}); }
+function addDays(d, n) { const nd = new Date(d); nd.setDate(nd.getDate()+n); return nd; }
+function sameDay(a,b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function daysBetween(a,b) { return Math.round((b-a)/86400000); }
+
+// ═══════════════════════════════════════════════════════════════
+// UNIT / CHUNK BUILDERS
+// ═══════════════════════════════════════════════════════════════
+function buildBavliUnits(masechtaList, startPoint, endPoint) {
+  let units = [];
+  masechtaList.forEach(m => {
+    for (let d = m.start; d <= m.end; d++) {
+      units.push({ mId:m.id, he:m.he, en:m.en, daf:d, amud:'a' });
+      units.push({ mId:m.id, he:m.he, en:m.en, daf:d, amud:'b' });
+    }
+  });
+  if (startPoint) { const i = units.findIndex(u=>u.mId===startPoint.mId && u.daf===startPoint.daf && u.amud===startPoint.amud); if (i>=0) units = units.slice(i); }
+  if (endPoint) { const i = units.findIndex(u=>u.mId===endPoint.mId && u.daf===endPoint.daf && u.amud===endPoint.amud); if (i>=0) units = units.slice(0,i+1); }
+  return units;
+}
+function groupBavliChunks(units, paceUnit) {
+  if (paceUnit === 'amud') return units.map(u => ({ units:[u], mId:u.mId, he:u.he, en:u.en, label:`${u.he} ${u.daf}${u.amud}`, sub:`${u.en} ${u.daf}${u.amud}` }));
+  const chunks = []; let i = 0;
+  while (i < units.length) {
+    const u = units[i];
+    if (u.amud==='a' && units[i+1] && units[i+1].mId===u.mId && units[i+1].daf===u.daf && units[i+1].amud==='b') {
+      chunks.push({ units:[u,units[i+1]], mId:u.mId, he:u.he, en:u.en, label:`${u.he} דף ${u.daf}`, sub:`${u.en}, Daf ${u.daf}` });
+      i += 2;
+    } else {
+      chunks.push({ units:[u], mId:u.mId, he:u.he, en:u.en, label:`${u.he} ${u.daf}${u.amud}`, sub:`${u.en} ${u.daf}${u.amud} (partial daf)` });
+      i += 1;
+    }
+  }
+  return chunks;
+}
+function buildMishnaUnits(masechtaList, startPoint, endPoint) {
+  let units = [];
+  masechtaList.forEach(m => {
+    m.mishnayos.forEach((count, pIdx) => { for (let i=1;i<=count;i++) units.push({ mId:m.id, he:m.he, en:m.en, perek:pIdx+1, mishnah:i, perekCount:count }); });
+  });
+  if (startPoint) { const i = units.findIndex(u=>u.mId===startPoint.mId && u.perek===startPoint.perek && u.mishnah===startPoint.mishnah); if (i>=0) units = units.slice(i); }
+  if (endPoint) { const i = units.findIndex(u=>u.mId===endPoint.mId && u.perek===endPoint.perek && u.mishnah===endPoint.mishnah); if (i>=0) units = units.slice(0,i+1); }
+  return units;
+}
+function groupMishnaChunks(units, paceUnit) {
+  if (paceUnit === 'mishnah') return units.map(u => ({ units:[u], mId:u.mId, he:u.he, en:u.en, label:`${u.he} ${u.perek}:${u.mishnah}`, sub:`${u.en}, Perek ${u.perek}, Mishnah ${u.mishnah}` }));
+  const chunks = []; let i = 0;
+  while (i < units.length) {
+    const u = units[i]; const group = [u]; let j = i+1;
+    while (j < units.length && units[j].mId===u.mId && units[j].perek===u.perek) { group.push(units[j]); j++; }
+    const partial = group.length < u.perekCount;
+    chunks.push({ units:group, mId:u.mId, he:u.he, en:u.en, label:`${u.he} פרק ${u.perek}`, sub:`${u.en}, Perek ${u.perek}${partial?' (partial)':''}` });
+    i = j;
+  }
+  return chunks;
+}
+function buildShnayimUnits(masechtaList, startPoint, endPoint) {
+  let units = [];
+  masechtaList.forEach(m => { for (let a=1;a<=7;a++) units.push({ mId:m.id, he:m.he, en:m.en, aliyah:a }); });
+  if (startPoint) { const i = units.findIndex(u=>u.mId===startPoint.mId && u.aliyah===startPoint.aliyah); if (i>=0) units = units.slice(i); }
+  if (endPoint) { const i = units.findIndex(u=>u.mId===endPoint.mId && u.aliyah===endPoint.aliyah); if (i>=0) units = units.slice(0,i+1); }
+  return units;
+}
+function groupShnayimChunks(units, paceUnit) {
+  if (paceUnit === 'aliyah') return units.map(u => ({ units:[u], mId:u.mId, he:u.he, en:u.en, label:`${u.he} עלייה ${u.aliyah}`, sub:`${u.en}, Aliyah ${u.aliyah}` }));
+  const chunks = []; let i = 0;
+  while (i < units.length) {
+    const u = units[i]; const group = [u]; let j = i+1;
+    while (j < units.length && units[j].mId===u.mId) { group.push(units[j]); j++; }
+    const partial = group.length < 7;
+    chunks.push({ units:group, mId:u.mId, he:u.he, en:u.en, label:`פרשת ${u.he}`, sub:`Parshas ${u.en}${partial?' (partial)':''}` });
+    i = j;
+  }
+  return chunks;
+}
+function buildChunks(category, masechtaList, startPoint, endPoint, paceUnit) {
+  if (category === 'bavli') return groupBavliChunks(buildBavliUnits(masechtaList, startPoint, endPoint), paceUnit);
+  if (category === 'mishna') return groupMishnaChunks(buildMishnaUnits(masechtaList, startPoint, endPoint), paceUnit);
+  return groupShnayimChunks(buildShnayimUnits(masechtaList, startPoint, endPoint), paceUnit);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEDULING ENGINE
+// ═══════════════════════════════════════════════════════════════
+// Returns an array of Date objects, index-aligned to chunk index, OR null if it cannot progress at all.
+function buildSchedule(chunkCount, startDate, paceQty, interval, learningDaysSet) {
+  if (chunkCount === 0) return [];
+  const result = [];
+  let idx = 0, bank = 0, date = new Date(startDate);
+  const weeklyRatePerDay = paceQty / 7;
+  let guard = 0;
+  const GUARD_MAX = 40000;
+  while (idx < chunkCount && guard < GUARD_MAX) {
+    guard++;
+    const isActive = learningDaysSet.has(date.getDay());
+    if (interval === 'week') bank += weeklyRatePerDay;
+    if (isActive) {
+      let take;
+      if (interval === 'day') take = paceQty;
+      else take = Math.floor(bank + 1e-9);
+      take = Math.min(take, chunkCount - idx);
+      if (take > 0) {
+        for (let k=0;k<take;k++) result.push(new Date(date));
+        idx += take;
+        if (interval === 'week') bank -= take;
+      }
+    }
+    date = addDays(date, 1);
+  }
+  if (idx < chunkCount) return null; // could not schedule (e.g. no learning days selected)
+  return result;
+}
+// Binary search: minimal pace quantity such that schedule finishes on/before endDate.
+function findMinPace(chunkCount, startDate, endDate, interval, learningDaysSet) {
+  let lo = 1, hi = Math.max(1, chunkCount);
+  function finishesInTime(q) {
+    const sched = buildSchedule(chunkCount, startDate, q, interval, learningDaysSet);
+    if (!sched || sched.length < chunkCount) return false;
+    return sched[chunkCount-1] <= endDate;
+  }
+  if (!finishesInTime(hi)) return null;
+  while (lo < hi) {
+    const mid = Math.floor((lo+hi)/2);
+    if (finishesInTime(mid)) hi = mid; else lo = mid+1;
+  }
+  return lo;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════
+function loadPlans() { try { return JSON.parse(localStorage.getItem('lp_plans')||'[]'); } catch { return []; } }
+function savePlans(plans) { localStorage.setItem('lp_plans', JSON.stringify(plans)); scheduleCloudPush(); }
+function loadChecked(planId) { try { return new Set(JSON.parse(localStorage.getItem('lp_checked_'+planId)||'[]')); } catch { return new Set(); } }
+function saveChecked(planId, set) { localStorage.setItem('lp_checked_'+planId, JSON.stringify([...set])); scheduleCloudPush(); }
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let plans = loadPlans();
+let activeTab = plans.length ? plans[0].id : 'new';
+let planFilter = 'upcoming'; // upcoming | all | done
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = '';
+  plans.forEach(p => {
+    const checked = loadChecked(p.id);
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (activeTab===p.id?' active':'');
+    btn.innerHTML = `${p.name} <span class="tc">${checked.size}/${p.chunks.length}</span>`;
+    btn.onclick = () => { activeTab = p.id; planFilter='upcoming'; renderAll(); };
+    el.appendChild(btn);
+  });
+  const nb = document.createElement('button');
+  nb.className = 'tab newplan' + (activeTab==='new'?' active':'');
+  nb.textContent = '+ New Plan';
+  nb.onclick = () => { activeTab = 'new'; renderAll(); };
+  el.appendChild(nb);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NEW PLAN FORM
+// ═══════════════════════════════════════════════════════════════
+let form = null;
+function freshForm() {
+  return {
+    category: 'bavli',
+    breadth: 'masechta', // masechta | seder | all
+    masechtaId: null,
+    sederName: null,
+    useCustomStart: false,
+    startDaf: null, startAmud: 'a', startPerek: null, startMishnah: null, startAliyah: null,
+    useCustomEnd: false,
+    endDaf: null, endAmud: 'b', endPerek: null, endMishnah: null, endAliyah: null,
+    paceUnit: 'daf',
+    paceQty: 1,
+    paceInterval: 'day',
+    learningDays: new Set([0,1,2,3,4,5,6]),
+    startDate: dateToStr(todayLocal()),
+    hasDeadline: false,
+    endDate: '',
+    deadlineMode: 'calcPace', // calcPace | ownPace
+    planName: '',
+  };
+}
+function currentCat() { return CATS[form.category]; }
+
+function masechtaOptionsHTML() {
+  const cat = currentCat();
+  let html = '';
+  cat.data.forEach(s => {
+    html += `<optgroup label="${cat.groupWord} ${s.seder}">`;
+    s.masechtot.forEach(m => { html += `<option value="${m.id}">${m.he} — ${m.en}</option>`; });
+    html += `</optgroup>`;
+  });
+  return html;
+}
+function sederOptionsHTML() {
+  const cat = currentCat();
+  return cat.data.map(s => `<option value="${s.seder}">${cat.groupWord} ${s.seder} (${s.masechtot.length} ${cat.itemWord.toLowerCase()})</option>`).join('');
+}
+
+function renderNewPlanForm() {
+  const wrap = document.createElement('div');
+  wrap.className = 'view' + (activeTab==='new'?' active':'');
+  wrap.id = 'view-new';
+  if (!form) form = freshForm();
+  const cat = currentCat();
+  const isBavli = form.category==='bavli', isMishna = form.category==='mishna', isShnayim = form.category==='shnayim';
+
+  wrap.innerHTML = `
+    <div class="form-section">
+      <h2>1. What are you learning?</h2>
+      <div class="pillrow" id="catPills">
+        ${Object.keys(CATS).map(k => `<div class="pill ${form.category===k?'active':''}" data-cat="${k}">${CATS[k].name}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>2. How much of it?</h2>
+      <div class="radio-row" id="breadthRow">
+        <label class="radio-opt ${form.breadth==='masechta'?'selected':''}">
+          <input type="radio" name="breadth" value="masechta" ${form.breadth==='masechta'?'checked':''}>
+          <div><div class="rlabel">A specific ${cat.itemWordSing}</div><div class="rsub">Choose one ${cat.itemWordSing.toLowerCase()}, optionally starting or ending mid-way through</div></div>
+        </label>
+        <label class="radio-opt ${form.breadth==='seder'?'selected':''}">
+          <input type="radio" name="breadth" value="seder" ${form.breadth==='seder'?'checked':''}>
+          <div><div class="rlabel">An entire ${cat.groupWord}</div><div class="rsub">All ${cat.itemWord.toLowerCase()} in one order, start to finish</div></div>
+        </label>
+        <label class="radio-opt ${form.breadth==='all'?'selected':''}">
+          <input type="radio" name="breadth" value="all">
+          <div><div class="rlabel">Everything — ${cat.allWord}</div><div class="rsub">The whole ${cat.name} from beginning to end</div></div>
+        </label>
+      </div>
+
+      <div class="subcollapse ${form.breadth==='masechta'?'open':''}" id="masechtaPicker">
+        <div class="field">
+          <label>${cat.itemWordSing}</label>
+          <select id="masechtaSelect">${masechtaOptionsHTML()}</select>
+        </div>
+      </div>
+      <div class="subcollapse ${form.breadth==='seder'?'open':''}" id="sederPicker">
+        <div class="field">
+          <label>${cat.groupWord}</label>
+          <select id="sederSelect">${sederOptionsHTML()}</select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section" id="rangeSection" style="${form.breadth==='masechta'?'':'display:none;'}">
+      <h2>3. Starting &amp; ending point</h2>
+      <div class="field-row">
+        <div class="field">
+          <label class="checkline"><input type="checkbox" id="useCustomStart" ${form.useCustomStart?'checked':''}><span>I'm not starting at the very beginning</span></label>
+          <div class="subcollapse ${form.useCustomStart?'open':''}" id="startPointBox">${rangePointHTML('start')}</div>
+        </div>
+        <div class="field">
+          <label class="checkline"><input type="checkbox" id="useCustomEnd" ${form.useCustomEnd?'checked':''}><span>I want to stop before the very end</span></label>
+          <div class="subcollapse ${form.useCustomEnd?'open':''}" id="endPointBox">${rangePointHTML('end')}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>4. Your pace</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Unit</label>
+          <select id="paceUnit">
+            ${cat.units.map(u => `<option value="${u}" ${form.paceUnit===u?'selected':''}>${cat.unitLabels[u]}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" id="paceQty" min="1" step="1" value="${form.paceQty}">
+        </div>
+        <div class="field">
+          <label>Frequency</label>
+          <select id="paceInterval">
+            <option value="day" ${form.paceInterval==='day'?'selected':''}>Per Day</option>
+            <option value="week" ${form.paceInterval==='week'?'selected':''}>Per Week</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Which days do you learn?</label>
+        <div class="daypills" id="dayPills">
+          ${DAY_NAMES.map((d,i) => `<div class="daypill ${form.learningDays.has(i)?'active':''}" data-day="${i}">${d}</div>`).join('')}
+        </div>
+        <div class="hint">Days you skip (e.g. Friday) still count toward a weekly pace, but you'll never be assigned anything on them.</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>5. Time span</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Start date</label>
+          <input type="date" id="startDate" value="${form.startDate}">
+        </div>
+      </div>
+      <div class="field" style="margin-top:6px;">
+        <label class="checkline"><input type="checkbox" id="hasDeadline" ${form.hasDeadline?'checked':''}><span>I have a target completion date (siyum, Yom Tov, etc.)</span></label>
+      </div>
+      <div class="subcollapse ${form.hasDeadline?'open':''}" id="deadlineBox">
+        <div class="field-row">
+          <div class="field">
+            <label>Target date</label>
+            <input type="date" id="endDate" value="${form.endDate}">
+          </div>
+        </div>
+        <div class="radio-row" style="margin-top:8px;">
+          <label class="radio-opt ${form.deadlineMode==='calcPace'?'selected':''}">
+            <input type="radio" name="deadlineMode" value="calcPace" ${form.deadlineMode==='calcPace'?'checked':''}>
+            <div><div class="rlabel">Tell me the pace I need</div><div class="rsub">I'll ignore the pace above and calculate the minimum needed to finish in time</div></div>
+          </label>
+          <label class="radio-opt ${form.deadlineMode==='ownPace'?'selected':''}">
+            <input type="radio" name="deadlineMode" value="ownPace" ${form.deadlineMode==='ownPace'?'checked':''}>
+            <div><div class="rlabel">Use my pace above — just check if it's enough</div><div class="rsub">I'll tell you if that pace gets you there on time</div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>6. Name this plan</h2>
+      <div class="field">
+        <input type="text" id="planName" placeholder="e.g. Chagigah Siyum, Seder Moed Mishnayos..." value="${form.planName}">
+      </div>
+    </div>
+
+    <div id="formError"></div>
+    <div class="btn-row">
+      <button class="btn primary" id="createPlanBtn">Create Plan</button>
+    </div>
+  `;
+
+  // ── wire up events ──
+  wrap.querySelectorAll('#catPills .pill').forEach(p => p.onclick = () => {
+    form.category = p.dataset.cat;
+    form.masechtaId = null; form.sederName = null;
+    form.useCustomStart = false; form.useCustomEnd = false;
+    form.paceUnit = form.category==='bavli' ? 'daf' : (form.category==='mishna' ? 'perek' : 'parsha');
+    renderAll();
+  });
+  wrap.querySelectorAll('input[name=breadth]').forEach(r => r.onchange = () => { form.breadth = r.value; renderAll(); });
+  const mSel = wrap.querySelector('#masechtaSelect'); if (mSel) mSel.onchange = () => { form.masechtaId = mSel.value; };
+  const sSel = wrap.querySelector('#sederSelect'); if (sSel) sSel.onchange = () => { form.sederName = sSel.value; };
+
+  const ucs = wrap.querySelector('#useCustomStart'); if (ucs) ucs.onchange = () => { form.useCustomStart = ucs.checked; renderAll(); };
+  const uce = wrap.querySelector('#useCustomEnd'); if (uce) uce.onchange = () => { form.useCustomEnd = uce.checked; renderAll(); };
+  wireRangeInputs(wrap, 'start');
+  wireRangeInputs(wrap, 'end');
+
+  wrap.querySelector('#paceUnit').onchange = (e) => { form.paceUnit = e.target.value; };
+  wrap.querySelector('#paceQty').oninput = (e) => { form.paceQty = e.target.value; };
+  wrap.querySelector('#paceInterval').onchange = (e) => { form.paceInterval = e.target.value; };
+  wrap.querySelectorAll('#dayPills .daypill').forEach(dp => dp.onclick = () => {
+    const day = parseInt(dp.dataset.day);
+    if (form.learningDays.has(day)) form.learningDays.delete(day); else form.learningDays.add(day);
+    dp.classList.toggle('active');
+  });
+
+  wrap.querySelector('#startDate').onchange = (e) => { form.startDate = e.target.value; };
+  const hd = wrap.querySelector('#hasDeadline'); hd.onchange = () => { form.hasDeadline = hd.checked; renderAll(); };
+  const ed = wrap.querySelector('#endDate'); if (ed) ed.onchange = (e) => { form.endDate = e.target.value; };
+  wrap.querySelectorAll('input[name=deadlineMode]').forEach(r => r.onchange = () => { form.deadlineMode = r.value; renderAll(); });
+
+  wrap.querySelector('#planName').oninput = (e) => { form.planName = e.target.value; };
+
+  wrap.querySelector('#createPlanBtn').onclick = () => handleCreatePlan(wrap);
+
+  return wrap;
+}
+
+function rangePointHTML(which) {
+  const cat = currentCat();
+  const pfx = which; // start | end
+  if (form.category === 'bavli') {
+    return `
+      <div class="field-row">
+        <div class="field"><label>Daf</label><input type="number" id="${pfx}Daf" min="2" value="${form[pfx+'Daf']||''}"></div>
+        <div class="field"><label>Amud</label><select id="${pfx}Amud"><option value="a" ${form[pfx+'Amud']==='a'?'selected':''}>א (a)</option><option value="b" ${form[pfx+'Amud']==='b'?'selected':''}>ב (b)</option></select></div>
+      </div>`;
+  } else if (form.category === 'mishna') {
+    return `
+      <div class="field-row">
+        <div class="field"><label>Perek</label><input type="number" id="${pfx}Perek" min="1" value="${form[pfx+'Perek']||''}"></div>
+        <div class="field"><label>Mishnah</label><input type="number" id="${pfx}Mishnah" min="1" value="${form[pfx+'Mishnah']||''}"></div>
+      </div>`;
+  } else {
+    return `
+      <div class="field-row">
+        <div class="field"><label>Aliyah</label><select id="${pfx}Aliyah">${[1,2,3,4,5,6,7].map(a=>`<option value="${a}" ${form[pfx+'Aliyah']==a?'selected':''}>${a}</option>`).join('')}</select></div>
+      </div>`;
+  }
+}
+function wireRangeInputs(wrap, which) {
+  const pfx = which;
+  const map = form.category==='bavli' ? [pfx+'Daf', pfx+'Amud'] : (form.category==='mishna' ? [pfx+'Perek', pfx+'Mishnah'] : [pfx+'Aliyah']);
+  map.forEach(id => {
+    const el = wrap.querySelector('#'+id);
+    if (el) el.oninput = el.onchange = (e) => { form[id] = e.target.type==='number' ? (e.target.value?parseInt(e.target.value):null) : e.target.value; };
+  });
+}
+
+function getScopeMasechtaList() {
+  const cat = currentCat();
+  if (form.breadth === 'all') { const list = []; cat.data.forEach(s => list.push(...s.masechtot)); return list; }
+  if (form.breadth === 'seder') {
+    const sederName = form.sederName || cat.data[0].seder;
+    const grp = cat.data.find(s => s.seder === sederName);
+    return grp ? grp.masechtot.slice() : [];
+  }
+  // masechta
+  const id = form.masechtaId || cat.data[0].masechtot[0].id;
+  const m = M_BY_ID[id];
+  return m ? [m] : [];
+}
+
+function handleCreatePlan(wrap) {
+  const errBox = document.getElementById('formError');
+  errBox.innerHTML = '';
+  const cat = currentCat();
+  const masechtaList = getScopeMasechtaList();
+  if (!masechtaList.length) { errBox.innerHTML = `<div class="err-box">Please choose what you'd like to learn.</div>`; return; }
+
+  let startPoint = null, endPoint = null;
+  if (form.breadth === 'masechta') {
+    const m = masechtaList[0];
+    if (form.useCustomStart) {
+      if (form.category==='bavli') {
+        if (!form.startDaf) { errBox.innerHTML = `<div class="err-box">Enter a starting daf.</div>`; return; }
+        if (form.startDaf < m.start || form.startDaf > m.end) { errBox.innerHTML = `<div class="err-box">${m.en} runs from daf ${m.start} to ${m.end}. Your starting daf is out of range.</div>`; return; }
+        startPoint = { mId:m.id, daf:form.startDaf, amud:form.startAmud||'a' };
+      } else if (form.category==='mishna') {
+        if (!form.startPerek || !form.startMishnah) { errBox.innerHTML = `<div class="err-box">Enter a starting perek and mishnah.</div>`; return; }
+        if (form.startPerek < 1 || form.startPerek > m.mishnayos.length) { errBox.innerHTML = `<div class="err-box">${m.en} has ${m.mishnayos.length} perakim.</div>`; return; }
+        if (form.startMishnah < 1 || form.startMishnah > m.mishnayos[form.startPerek-1]) { errBox.innerHTML = `<div class="err-box">Perek ${form.startPerek} of ${m.en} has ${m.mishnayos[form.startPerek-1]} mishnayos.</div>`; return; }
+        startPoint = { mId:m.id, perek:form.startPerek, mishnah:form.startMishnah };
+      } else {
+        startPoint = { mId:m.id, aliyah: form.startAliyah || 1 };
+      }
+    }
+    if (form.useCustomEnd) {
+      if (form.category==='bavli') {
+        if (!form.endDaf) { errBox.innerHTML = `<div class="err-box">Enter an ending daf.</div>`; return; }
+        if (form.endDaf < m.start || form.endDaf > m.end) { errBox.innerHTML = `<div class="err-box">${m.en} runs from daf ${m.start} to ${m.end}. Your ending daf is out of range.</div>`; return; }
+        endPoint = { mId:m.id, daf:form.endDaf, amud:form.endAmud||'b' };
+      } else if (form.category==='mishna') {
+        if (!form.endPerek || !form.endMishnah) { errBox.innerHTML = `<div class="err-box">Enter an ending perek and mishnah.</div>`; return; }
+        if (form.endPerek < 1 || form.endPerek > m.mishnayos.length) { errBox.innerHTML = `<div class="err-box">${m.en} has ${m.mishnayos.length} perakim.</div>`; return; }
+        if (form.endMishnah < 1 || form.endMishnah > m.mishnayos[form.endPerek-1]) { errBox.innerHTML = `<div class="err-box">Perek ${form.endPerek} of ${m.en} has ${m.mishnayos[form.endPerek-1]} mishnayos.</div>`; return; }
+        endPoint = { mId:m.id, perek:form.endPerek, mishnah:form.endMishnah };
+      } else {
+        endPoint = { mId:m.id, aliyah: form.endAliyah || 7 };
+      }
+    }
+  }
+
+  const chunks = buildChunks(form.category, masechtaList, startPoint, endPoint, form.paceUnit);
+  if (!chunks.length) { errBox.innerHTML = `<div class="err-box">Your starting and ending points leave nothing to learn — please check your range.</div>`; return; }
+  if (startPoint && endPoint) {
+    // sanity: ensure end comes after start (buildChunks already trims sequentially; if end point index precedes start, result would be wrong length or use whole list)
+  }
+
+  if (!form.learningDays.size) { errBox.innerHTML = `<div class="err-box">Select at least one day of the week you'll be learning.</div>`; return; }
+  if (!form.startDate) { errBox.innerHTML = `<div class="err-box">Choose a start date.</div>`; return; }
+  const startDate = parseDateStr(form.startDate);
+
+  let paceQty = parseInt(form.paceQty) || 0;
+  let endDate = null;
+  let computedPace = false;
+
+  if (form.hasDeadline) {
+    if (!form.endDate) { errBox.innerHTML = `<div class="err-box">Choose your target date.</div>`; return; }
+    endDate = parseDateStr(form.endDate);
+    if (endDate < startDate) { errBox.innerHTML = `<div class="err-box">Your target date is before your start date.</div>`; return; }
+    if (form.deadlineMode === 'calcPace') {
+      const minPace = findMinPace(chunks.length, startDate, endDate, form.paceInterval, form.learningDays);
+      if (minPace === null) { errBox.innerHTML = `<div class="err-box">There's no way to finish by that date with the learning days you selected — try adding more learning days or pushing back the target date.</div>`; return; }
+      paceQty = minPace;
+      computedPace = true;
+    }
+  }
+
+  if (!paceQty || paceQty < 1) { errBox.innerHTML = `<div class="err-box">Enter a pace of at least 1.</div>`; return; }
+
+  const schedule = buildSchedule(chunks.length, startDate, paceQty, form.paceInterval, form.learningDays);
+  if (!schedule) { errBox.innerHTML = `<div class="err-box">That pace and those learning days can't complete this plan — please adjust.</div>`; return; }
+
+  chunks.forEach((c,i) => c.date = dateToStr(schedule[i]));
+  const finishDate = schedule[schedule.length-1];
+
+  const scopeLabel = form.breadth==='all' ? cat.allWord : (form.breadth==='seder' ? `${cat.groupWord} ${form.sederName||masechtaList[0].seder}` : `${masechtaList[0].he} (${masechtaList[0].en})`);
+
+  const plan = {
+    id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    name: form.planName.trim() || `${masechtaList[0].en}${masechtaList.length>1?' et al':''} — ${cat.unitLabels[form.paceUnit]} plan`,
+    category: form.category,
+    scopeLabel,
+    chunks,
+    paceUnit: form.paceUnit,
+    paceQty,
+    paceInterval: form.paceInterval,
+    computedPace,
+    learningDays: [...form.learningDays],
+    startDate: form.startDate,
+    hasDeadline: form.hasDeadline,
+    endDate: form.hasDeadline ? form.endDate : null,
+    deadlineMode: form.deadlineMode,
+    finishDate: dateToStr(finishDate),
+    createdAt: Date.now(),
+  };
+  plans.push(plan);
+  savePlans(plans);
+  form = freshForm();
+  activeTab = plan.id;
+  planFilter = 'upcoming';
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAN VIEW
+// ═══════════════════════════════════════════════════════════════
+function renderPlanView(plan) {
+  const wrap = document.createElement('div');
+  wrap.className = 'view' + (activeTab===plan.id?' active':'');
+  wrap.id = 'view-' + plan.id;
+
+  const cat = CATS[plan.category];
+  const checked = loadChecked(plan.id);
+  const total = plan.chunks.length;
+  const done = checked.size;
+  const p = total ? Math.round(done/total*100) : 0;
+  const startDate = parseDateStr(plan.startDate);
+  const finishDate = parseDateStr(plan.finishDate);
+  const today = todayLocal();
+  const daysToFinish = daysBetween(today, finishDate);
+
+  // ── summary sentence ──
+  const paceUnitLabel = plan.paceQty===1 ? cat.unitLabels[plan.paceUnit] : cat.plural[plan.paceUnit];
+  const intervalLabel = plan.paceInterval==='day' ? 'day' : 'week';
+  let summaryHTML = '';
+  if (plan.computedPace) {
+    summaryHTML = `<p>To finish <b>${plan.scopeLabel}</b> by <b>${fmtDate(parseDateStr(plan.endDate))}</b>, you need to learn <b>${plan.paceQty} ${paceUnitLabel.toLowerCase()} per ${intervalLabel}</b>.</p>
+    <p class="sub">Starting ${fmtDate(startDate)}, that finishes on ${fmtDate(finishDate)}.</p>`;
+  } else if (plan.hasDeadline) {
+    const diff = daysBetween(finishDate, parseDateStr(plan.endDate));
+    const compareClass = diff >= 0 ? 'compare-good' : 'compare-bad';
+    const compareText = diff > 0 ? `${diff} day${diff===1?'':'s'} before your target — you're on track.` : (diff === 0 ? `right on your target date.` : `${Math.abs(diff)} day${Math.abs(diff)===1?'':'s'} after your target — consider a faster pace.`);
+    summaryHTML = `<p>Learning <b>${plan.scopeLabel}</b> at <b>${plan.paceQty} ${paceUnitLabel.toLowerCase()} per ${intervalLabel}</b> starting ${fmtDate(startDate)}, you'll finish on <b>${fmtDate(finishDate)}</b>.</p>
+    <p class="sub ${compareClass}">That's ${compareText}</p>`;
+  } else {
+    summaryHTML = `<p>Learning <b>${plan.scopeLabel}</b> at <b>${plan.paceQty} ${paceUnitLabel.toLowerCase()} per ${intervalLabel}</b> starting ${fmtDate(startDate)}, you'll finish on <b>${fmtDate(finishDate)}</b>.</p>`;
+  }
+
+  const remaining = total - done;
+
+  wrap.innerHTML = `
+    <div class="plan-head">
+      <div>
+        <h2>${plan.name}</h2>
+        <div class="plan-meta">${cat.name} · ${plan.scopeLabel} · ${total.toLocaleString()} ${(plan.paceQty===1?cat.unitLabels[plan.paceUnit]:cat.plural[plan.paceUnit]).toLowerCase()} total</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn danger" id="deleteBtn">Delete Plan</button>
+      </div>
+    </div>
+
+    <div class="summary-box">${summaryHTML}</div>
+
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-value green">${done}</div><div class="stat-label">Done</div></div>
+      <div class="stat"><div class="stat-value dim">${remaining}</div><div class="stat-label">Remaining</div></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${p}%"></div></div>
+      <div class="stat"><div class="stat-value">${p}%</div><div class="stat-label">Complete</div></div>
+      <div class="stat"><div class="stat-value ${daysToFinish<0?'dim':''}">${daysToFinish>=0?daysToFinish:0}</div><div class="stat-label">${daysToFinish>=0?'Days To Finish':'Finish Date Passed'}</div></div>
+    </div>
+
+    <div class="filter-row" id="filterRow">
+      <div class="pill ${planFilter==='upcoming'?'active':''}" data-f="upcoming">Upcoming</div>
+      <div class="pill ${planFilter==='all'?'active':''}" data-f="all">Full Schedule</div>
+      <div class="pill ${planFilter==='done'?'active':''}" data-f="done">Completed</div>
+    </div>
+
+    <div id="calendarBody"></div>
+  `;
+
+  wrap.querySelector('#deleteBtn').onclick = () => {
+    if (!confirm(`Delete "${plan.name}"? This can't be undone.`)) return;
+    plans = plans.filter(pl => pl.id !== plan.id);
+    savePlans(plans);
+    localStorage.removeItem('lp_checked_'+plan.id);
+    scheduleCloudPush();
+    activeTab = plans.length ? plans[0].id : 'new';
+    renderAll();
+  };
+  wrap.querySelectorAll('#filterRow .pill').forEach(pl => pl.onclick = () => { planFilter = pl.dataset.f; renderAll(); });
+
+  wrap.querySelector('#calendarBody').appendChild(renderCalendar(plan, checked, today));
+
+  return wrap;
+}
+
+function renderCalendar(plan, checked, today) {
+  const body = document.createElement('div');
+  let indices = plan.chunks.map((c,i)=>i);
+
+  if (planFilter === 'done') {
+    indices = indices.filter(i => checked.has(i));
+  } else if (planFilter === 'upcoming') {
+    const cutoff = addDays(today, -1); // include today
+    indices = indices.filter(i => !checked.has(i) && parseDateStr(plan.chunks[i].date) >= cutoff);
+    indices = indices.slice(0, 200);
+  }
+  // 'all' — everything
+
+  if (!indices.length) {
+    body.innerHTML = `<div class="empty-note">${planFilter==='done' ? "Nothing checked off yet — check items off below and they'll appear here." : "Nothing to show. Try the \"Full Schedule\" tab."}</div>`;
+    return body;
+  }
+
+  // group by date
+  const byDate = {};
+  const order = [];
+  indices.forEach(i => {
+    const d = plan.chunks[i].date;
+    if (!byDate[d]) { byDate[d] = []; order.push(d); }
+    byDate[d].push(i);
+  });
+  order.sort();
+
+  order.forEach(dstr => {
+    const d = parseDateStr(dstr);
+    const group = document.createElement('div');
+    group.className = 'day-group' + (sameDay(d, today) ? ' today' : '');
+    const idxs = byDate[dstr];
+    const doneCount = idxs.filter(i => checked.has(i)).length;
+    group.innerHTML = `
+      <div class="day-header">
+        <div class="dname">${fmtDateShort(d)} <small>${sameDay(d,today)?'· TODAY':''}</small></div>
+        <div class="dcount">${doneCount}/${idxs.length}</div>
+      </div>
+      <div class="day-body"></div>
+    `;
+    const dbody = group.querySelector('.day-body');
+    idxs.forEach(i => {
+      const chunk = plan.chunks[i];
+      const row = document.createElement('div');
+      row.className = 'chunk-row' + (checked.has(i) ? ' done' : '');
+      row.innerHTML = `<input type="checkbox" ${checked.has(i)?'checked':''}> <span class="clabel">${chunk.label}</span><span class="csub">${chunk.sub}</span>`;
+      row.onclick = (e) => {
+        if (e.target.tagName !== 'INPUT') { const cb = row.querySelector('input'); cb.checked = !cb.checked; }
+        if (checked.has(i)) checked.delete(i); else checked.add(i);
+        saveChecked(plan.id, checked);
+        renderAll();
+      };
+      dbody.appendChild(row);
+    });
+    body.appendChild(group);
+  });
+
+  return body;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderAll() {
+  renderTabs();
+  const views = document.getElementById('views');
+  views.innerHTML = '';
+  views.appendChild(renderNewPlanForm());
+  plans.forEach(p => views.appendChild(renderPlanView(p)));
+}
+renderAll();
+
+// ═══════════════════════════════════════════════════════════════
+// CLOUD SYNC (Firebase Auth + Firestore) — same account as לימוד Tracker
+// ═══════════════════════════════════════════════════════════════
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCdBA_DVEupBTrwRVYKhvVw8KU8SKMpxOE",
+  authDomain: "gemara-tracker.firebaseapp.com",
+  projectId: "gemara-tracker",
+  storageBucket: "gemara-tracker.firebasestorage.app",
+  messagingSenderId: "423553680704",
+  appId: "1:423553680704:web:c8f055382016b3370366a5",
+  measurementId: "G-PBV5LH1JNP"
+};
+
+let auth = null, db = null, cloudReady = false;
+let currentUser = null, unsubSnapshot = null, pushTimer = null, suppressPush = false;
+
+try {
+  if (firebaseConfig.apiKey && typeof firebase !== 'undefined' && typeof firebase.auth === 'function' && typeof firebase.firestore === 'function') {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth(); db = firebase.firestore(); cloudReady = true;
+  }
+} catch (e) {
+  console.warn('Cloud sync not available:', e); cloudReady = false;
+}
+
+// ── planner state <-> cloud shape ────────────────────────────
+function getLocalPlannerState() {
+  const pl = loadPlans();
+  const checked = {};
+  pl.forEach(p => { const s = loadChecked(p.id); if (s.size) checked[p.id] = [...s]; });
+  return { plans: pl, checked };
+}
+function applyPlannerState(state, opts = {}) {
+  const newPlans = (state && state.plans) ? state.plans : [];
+  savePlansLocalOnly(newPlans);
+  const keepIds = new Set(newPlans.map(p => p.id));
+  Object.keys(localStorage).filter(k => k.startsWith('lp_checked_')).forEach(k => {
+    const pid = k.slice('lp_checked_'.length);
+    if (!keepIds.has(pid)) localStorage.removeItem(k);
+  });
+  const checked = (state && state.checked) ? state.checked : {};
+  Object.keys(checked).forEach(pid => {
+    localStorage.setItem('lp_checked_' + pid, JSON.stringify(checked[pid]));
+  });
+  plans = loadPlans();
+  if (!plans.find(p => p.id === activeTab)) activeTab = plans.length ? plans[0].id : 'new';
+}
+// writes to localStorage without re-triggering a cloud push (used when applying cloud data)
+function savePlansLocalOnly(pl) { localStorage.setItem('lp_plans', JSON.stringify(pl)); }
+
+function unionPlannerState(a, b) {
+  const planMap = {};
+  (a.plans || []).forEach(p => planMap[p.id] = p);
+  (b.plans || []).forEach(p => { if (!planMap[p.id]) planMap[p.id] = p; });
+  const mergedPlans = Object.values(planMap);
+  const checked = {};
+  const allIds = new Set([...Object.keys(a.checked || {}), ...Object.keys(b.checked || {})]);
+  allIds.forEach(id => {
+    const set = new Set([...((a.checked && a.checked[id]) || []), ...((b.checked && b.checked[id]) || [])]);
+    if (set.size) checked[id] = [...set];
+  });
+  return { plans: mergedPlans, checked };
+}
+
+function scheduleCloudPush() {
+  if (!cloudReady || !currentUser || suppressPush) return;
+  setSyncStatus('syncing');
+  clearTimeout(pushTimer); pushTimer = setTimeout(pushToCloud, 900);
+}
+function pushToCloud() {
+  if (!cloudReady || !currentUser) return;
+  const planner = getLocalPlannerState();
+  db.collection('users').doc(currentUser.uid).set({
+    planner, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).then(() => setSyncStatus('synced')).catch(() => setSyncStatus('error'));
+}
+
+function attachListener() {
+  if (unsubSnapshot) unsubSnapshot();
+  unsubSnapshot = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+    if (!doc.exists) return;
+    const cloudPlanner = doc.data().planner || { plans: [], checked: {} };
+    const localPlanner = getLocalPlannerState();
+    if (JSON.stringify(cloudPlanner) === JSON.stringify(localPlanner)) {
+      setSyncStatus('synced'); return;
+    }
+    suppressPush = true;
+    applyPlannerState(cloudPlanner);
+    suppressPush = false;
+    setSyncStatus('synced'); renderAll();
+  }, () => setSyncStatus('error'));
+}
+
+function reconcileOnSignIn() {
+  setSyncStatus('syncing');
+  const localPlanner = getLocalPlannerState();
+  const hasLocal = localPlanner.plans.length > 0;
+  db.collection('users').doc(currentUser.uid).get().then(doc => {
+    const cloudPlanner = (doc.exists && doc.data().planner) ? doc.data().planner : { plans: [], checked: {} };
+    const hasCloud = (cloudPlanner.plans || []).length > 0;
+
+    if (!hasCloud) { pushToCloud(); attachListener(); return; }
+    if (!hasLocal) {
+      suppressPush = true; applyPlannerState(cloudPlanner); suppressPush = false;
+      renderAll(); attachListener(); setSyncStatus('synced'); return;
+    }
+    if (JSON.stringify(cloudPlanner) === JSON.stringify(localPlanner)) {
+      attachListener(); setSyncStatus('synced'); return;
+    }
+    openConflictModal(localPlanner, cloudPlanner);
+  }).catch(() => setSyncStatus('error'));
+}
+
+function openConflictModal(localPlanner, cloudPlanner) {
+  document.getElementById('conflictOverlay').classList.remove('hidden');
+  document.getElementById('conflictMerge').onclick = () => {
+    suppressPush = true; applyPlannerState(unionPlannerState(localPlanner, cloudPlanner)); suppressPush = false;
+    renderAll(); closeConflictModal(); pushToCloud(); attachListener();
+  };
+  document.getElementById('conflictCloud').onclick = () => {
+    suppressPush = true; applyPlannerState(cloudPlanner); suppressPush = false;
+    renderAll(); closeConflictModal(); attachListener(); setSyncStatus('synced');
+  };
+  document.getElementById('conflictLocal').onclick = () => {
+    closeConflictModal(); pushToCloud(); attachListener();
+  };
+}
+function closeConflictModal() { document.getElementById('conflictOverlay').classList.add('hidden'); }
+
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot'); const label = document.getElementById('syncLabel');
+  if (!dot || !label) return;
+  dot.className = 'sync-dot ' + status;
+  const map = { synced: 'Synced', syncing: 'Syncing…', error: 'Sync error', offline: 'Local only' };
+  label.textContent = map[status] || '';
+}
+
+function updateAccountBar() {
+  const bar = document.getElementById('accountBar');
+  if (!cloudReady) { bar.innerHTML = `<span class="confignote">Cloud sync not configured</span>`; return; }
+  if (currentUser) {
+    bar.innerHTML = `<span class="sync-dot" id="syncDot"></span><span id="syncLabel"></span><span class="email">${currentUser.email}</span><button class="btn" id="signOutBtn">Sign Out</button>`;
+    document.getElementById('signOutBtn').onclick = handleSignOut; setSyncStatus('synced');
+  } else {
+    bar.innerHTML = `<button class="btn" id="signInBtn">Sign In to Sync</button>`;
+    document.getElementById('signInBtn').onclick = openAuthModal;
+  }
+}
+
+function openAuthModal() {
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('authError').textContent = ''; document.getElementById('authMsg').textContent = '';
+}
+function closeAuthModal() { document.getElementById('authOverlay').classList.add('hidden'); }
+
+function friendlyAuthError(err) {
+  const map = {
+    'auth/email-already-in-use': 'That email already has an account.',
+    'auth/invalid-email': 'That email address looks invalid.',
+    'auth/weak-password': 'Password must be at least 6 characters.',
+    'auth/user-not-found': 'No account found with that email.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/too-many-requests': 'Too many attempts — try again in a bit.'
+  };
+  return map[err.code] || err.message;
+}
+
+function handleAuthSubmit(mode) {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Enter an email and password.'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+  const action = mode === 'signup' ? auth.createUserWithEmailAndPassword(email, pass) : auth.signInWithEmailAndPassword(email, pass);
+  action.then(() => closeAuthModal()).catch(err => errEl.textContent = friendlyAuthError(err));
+}
+function handlePasswordReset() {
+  const email = document.getElementById('authEmail').value.trim();
+  const errEl = document.getElementById('authError'), msgEl = document.getElementById('authMsg');
+  errEl.textContent = ''; msgEl.textContent = '';
+  if (!email) { errEl.textContent = 'Enter your email above first.'; return; }
+  auth.sendPasswordResetEmail(email).then(() => msgEl.textContent = 'Password reset email sent.').catch(err => errEl.textContent = friendlyAuthError(err));
+}
+function handleSignOut() { if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; } auth.signOut(); }
+
+document.getElementById('authCloseBtn').onclick = closeAuthModal;
+document.getElementById('authOverlay').addEventListener('click', e => { if (e.target.id === 'authOverlay') closeAuthModal(); });
+document.getElementById('authSignInBtn').onclick = () => handleAuthSubmit('signin');
+document.getElementById('authSignUpBtn').onclick = () => handleAuthSubmit('signup');
+document.getElementById('authForgotBtn').onclick = handlePasswordReset;
+updateAccountBar();
+
+if (cloudReady) {
+  auth.onAuthStateChanged(user => {
+    if (user) { currentUser = user; updateAccountBar(); reconcileOnSignIn(); }
+    else { currentUser = null; if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; } updateAccountBar(); }
+  });
+}
+</script>
+</body>
+</html>
