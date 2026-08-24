@@ -1272,7 +1272,11 @@ function reconcileOnSignIn() {
     if (JSON.stringify(cloudPlanner) === JSON.stringify(localPlanner)) {
       attachListener(); setSyncStatus('synced'); return;
     }
-    openConflictModal(localPlanner, cloudPlanner);
+    // Checkmarks are add-only and plans are usually distinct per device, so
+    // differences are almost never real contradictions — just combine them
+    // instead of interrupting with a prompt every time.
+    suppressPush = true; applyPlannerState(unionPlannerState(localPlanner, cloudPlanner)); suppressPush = false;
+    renderAll(); pushToCloud(); attachListener();
   }).catch(() => setSyncStatus('error'));
 }
 
