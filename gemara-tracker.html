@@ -1208,7 +1208,10 @@ function reconcileOnSignIn() {
     if (JSON.stringify(cloudProgress) === JSON.stringify(localProgress)) {
       attachListener(); setSyncStatus('synced'); return;
     }
-    openConflictModal(localProgress, cloudProgress);
+    // Progress is add-only (checking off dapim/mishnayos), so differences between
+    // this device and the cloud are never real contradictions — just combine them.
+    applyProgressObject(unionProgress(localProgress, cloudProgress), {clearMissing:true});
+    renderAll(); pushToCloud(); attachListener();
   }).catch(() => setSyncStatus('error'));
 }
 
